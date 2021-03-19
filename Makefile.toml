@@ -1,0 +1,8 @@
+[tasks.build]
+command = "cargo"
+args = ["objcopy", "--", "-I", "elf64-x86-64", "-O", "binary", "--binary-architecture=i386:x86-64", "target/x86_64-os/debug/os.bin"]
+
+[tasks.run]
+command = "qemu-system-x86_64"
+args = ["-drive", "format=raw,file=target/x86_64-os/debug/os.bin"]
+dependencies = ["build"]

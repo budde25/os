@@ -1,16 +1,44 @@
-ENTRY(start)
+ENTRY(_start)
 
 SECTIONS {
-    . = 1M;
+    . = 0x500;
+    /* buffer for loading the kernel */
+    _kernel_buffer = .;
+    . += 512;
+    /* page tables */
+    . = ALIGN(0x1000);
+    __page_table_start = .;
+    _p4 = .;
+    . += 0x1000;
+    _p3 = .;
+    . += 0x1000;
+    _p2 = .;
+    . += 0x1000;
+    _p1 = .;
+    . += 0x1000;
+    __page_table_end = .;
+    __bootloader_start = .;
+    _memory_map = .;
+    . += 0x1000;
 
-    .boot :
-    {
-        /* ensure that the multiboot header is at the beginning */
-        *(.multiboot_header)
-    }
+    _stack_start = .;
+    . = 0x7c00;
+    _stack_end = .;
 
-    .text :
+    .bootloader :
     {
-        *(.text)
+        *(.boot_1)
+        _rest_of_bootloader_start_addr = .;
+        *(.boot)
+        *(.context_switch)
+        *(.text .text.*)
+        *(.rodata .rodata.*)
+        *(.data .data.*)
+        *(.got)
+        . = ALIGN(512);
+        _rest_of_bootloader_end_addr = .;
+        __bootloader_end = .;
     }
+    _kernel_size = 0x90000;
+    _kernel_start = 0x80000000;
 }

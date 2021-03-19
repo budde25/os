@@ -1,5 +1,10 @@
 #![no_std]
+#![no_main]
 #![feature(panic_info_message,asm, global_asm, lang_items)]
+
+global_asm!(include_str!("arch/x86_64/boot_1.s"));
+global_asm!(include_str!("arch/x86_64/boot_2.s"));
+global_asm!(include_str!("arch/x86_64/boot_3.s"));
 
 #[no_mangle]
 pub extern "C" fn kmain() {
@@ -7,7 +12,7 @@ pub extern "C" fn kmain() {
 	// ready to start scheduling. The last thing this
 	// should do is start the timer.
 
-	 // ATTENTION: we have a very small stack and no guard page
+	// loop {}
 
     let hello = b"Hello World!";
     let color_byte = 0x1f; // white foreground, blue background
