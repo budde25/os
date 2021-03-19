@@ -6,6 +6,8 @@ global_asm!(include_str!("arch/x86_64/boot_1.s"));
 global_asm!(include_str!("arch/x86_64/boot_2.s"));
 global_asm!(include_str!("arch/x86_64/boot_3.s"));
 
+mod vga;
+
 #[no_mangle]
 pub extern "C" fn kmain() {
 	// Main should initialize all sub-systems and get
@@ -59,7 +61,7 @@ extern "C" fn eh_personality() {
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
 	print!("Aborting: ");
-	if let Some(_p) = info.location() {
+	if let Some(p) = info.location() {
 		println!(
 					"line {}, file {}: {}",
 					p.line(),

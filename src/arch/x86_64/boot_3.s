@@ -190,6 +190,12 @@ gdt_64_pointer:
     .long gdt_64                            # 32-bit Base Address of GDT. (CPU will zero extend to 64-bit)
 
 # VGA printing (in long protected mode)
+VGA_WIDTH:
+    .quad 0x50 #80
+
+VGA_HEIGHT:
+    .quad 0x19 #25
+
 vga_map_frame_buffer:
     mov eax, 0xa0000
     or eax, (1 | 2)
