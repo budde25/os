@@ -3,8 +3,8 @@
 #![feature(panic_info_message, asm, global_asm, lang_items)]
 
 global_asm!(include_str!("arch/x86_64/boot_1.s"));
-global_asm!(include_str!("arch/x86_64/boot_2.s"));
-global_asm!(include_str!("arch/x86_64/boot_3.s"));
+//global_asm!(include_str!("arch/x86_64/boot_2.s"));
+//global_asm!(include_str!("arch/x86_64/boot_3.s"));
 
 mod vga;
 

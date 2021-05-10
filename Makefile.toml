@@ -1,8 +1,37 @@
+[env]
+DEV = false
+PROD = false
+ROOT = "${CARGO_MAKE_WORKING_DIRECTORY}"
+
+[env.development]
+DEV = true
+
+[env.production]
+PROD = true
+
 [tasks.build]
 command = "cargo"
-args = ["objcopy", "--", "-I", "elf64-x86-64", "-O", "binary", "--binary-architecture=i386:x86-64", "target/x86_64-os/debug/os.bin"]
+args = ["build"]
 
 [tasks.run]
 command = "qemu-system-x86_64"
-args = ["-drive", "format=raw,file=target/x86_64-os/debug/os.bin"]
+args = ["-cdrom", "${ROOT}/target/os.iso"]
+dependencies = ["iso"]
+
+[tasks.iso]
+script = [
+    "mkdir -p ${ROOT}/target/isofiles/boot/grub",
+    "cp ${ROOT}/target/x86_64-os/debug/os ${ROOT}/target/isofiles/boot/os.bin",
+    "cp ${ROOT}/src/arch/x86_64/grub.cfg ${ROOT}/target/isofiles/boot/grub",
+    "grub-mkrescue -o ${ROOT}/target/os.iso ${ROOT}/target/isofiles 2> /dev/null",
+    "rm -r ${ROOT}/target/isofiles"
+]
 dependencies = ["build"]
+
+[tasks.test-multiboot2]
+condition = { fail_message = "Not multiboot2" }
+condition_script = [
+    "exit 1"
+]
+command = "grub-file"
+args = ["--is-x86_64-multiboot2 ${ROOT}/target/x86_64-os/debug/os"]
