@@ -1,10 +1,16 @@
 #![no_std]
 #![no_main]
-#![feature(panic_info_message, asm, global_asm, lang_items)]
+#![feature(
+    panic_info_message,
+    asm,
+    global_asm,
+    lang_items,
+    custom_test_frameworks
+)]
+#![test_runner(crate::test_runner)]
 
-global_asm!(include_str!("arch/x86_64/boot_1.s"));
-global_asm!(include_str!("arch/x86_64/boot_2.s"));
-//global_asm!(include_str!("arch/x86_64/boot_3.s"));
+global_asm!(include_str!("arch/x86_64/boot_32.s"));
+global_asm!(include_str!("arch/x86_64/boot_64.s"));
 
 mod vga;
 
@@ -74,4 +80,12 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 #[no_mangle]
 extern "C" fn abort() -> ! {
     loop {}
+}
+
+#[cfg(test)]
+fn test_runner(tests: &[&dyn Fn()]) {
+    println!("Running {} tests", tests.len());
+    for test in tests {
+        test();
+    }
 }
