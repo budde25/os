@@ -4,7 +4,11 @@ SECTIONS
 {
     /* Conventional starting place */
     . = 1M;
-
+    .boot :
+    {
+        KEEP(*(.multiboot))
+    }
+    
     /* Start with multiboot then .text */
     .text :
     {
@@ -30,5 +34,5 @@ SECTIONS
         *(.bss)
     }
 
-    end = .;
+    /DISCARD/ : { *(.eh_frame) *(.comment) }
 }
