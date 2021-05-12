@@ -20,39 +20,10 @@ pub extern "C" fn kmain() {
     // ready to start scheduling. The last thing this
     // should do is start the timer.
 
-    // loop {}
-
-    let hello = b"Hello World!";
-    let color_byte = 0x1f; // white foreground, blue background
-
-    let mut hello_colored = [color_byte; 24];
-    for (i, char_byte) in hello.into_iter().enumerate() {
-        hello_colored[i * 2] = *char_byte;
-    }
-
-    // write `Hello World!` to the center of the VGA text buffer
-    let buffer_ptr = (0xb8000 + 1988) as *mut _;
-    unsafe { *buffer_ptr = hello_colored };
+    println!("Hello, World");
+    print!("line2");
 
     loop {}
-}
-
-#[macro_export]
-macro_rules! print {
-    ($($args:tt)+) => {{}};
-}
-#[macro_export]
-macro_rules! println
-{
-	() => ({
-		print!("\r\n")
-	});
-	($fmt:expr) => ({
-		print!(concat!($fmt, "\r\n"))
-	});
-	($fmt:expr, $($args:tt)+) => ({
-		print!(concat!($fmt, "\r\n"), $($args)+)
-	});
 }
 
 #[lang = "eh_personality"]
