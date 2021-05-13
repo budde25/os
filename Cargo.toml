@@ -9,6 +9,7 @@ llvm-tools = "0.1"
 
 [dependencies]
 spin = "*"
+bit_field = "*"
 
 [dependencies.lazy_static]
 features = ["spin_no_std"]

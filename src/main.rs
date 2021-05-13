@@ -5,13 +5,15 @@
     asm,
     global_asm,
     lang_items,
-    custom_test_frameworks
+    custom_test_frameworks,
+    llvm_asm
 )]
 #![test_runner(crate::test_runner)]
 
 global_asm!(include_str!("arch/x86_64/boot_32.s"));
 global_asm!(include_str!("arch/x86_64/boot_64.s"));
 
+mod interrupts;
 mod vga;
 
 #[no_mangle]
@@ -19,11 +21,15 @@ pub extern "C" fn kmain() {
     // Main should initialize all sub-systems and get
     // ready to start scheduling. The last thing this
     // should do is start the timer.
+    interrupts::init();
 
-    println!("Hello, World");
-    print!("line2");
+    println!("Did not crash");
 
     loop {}
+}
+
+fn divide_by_zero() {
+    unsafe { llvm_asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel") }
 }
 
 #[lang = "eh_personality"]
