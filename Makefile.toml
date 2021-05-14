@@ -1,7 +1,10 @@
 [env]
 DEV = false
 PROD = false
+TEST = false
 ROOT = "${CARGO_MAKE_WORKING_DIRECTORY}"
+QEMU_ARGS = ["-cdrom ${ROOT}/target/os.iso"]
+QEMU_ARGS_TEST = ["-device isa-debug-exit,iobase=0xf4,iosize=0x04"]
 
 [env.development]
 DEV = true
@@ -14,14 +17,28 @@ command = "cargo"
 args = ["build"]
 
 [tasks.run]
+run_task = {name = ["iso", "qemu", "qemu-test"]}
+dependencies = ["check_env_test"]
+
+[tasks.qemu]
+condition = { env_false = ["TEST"] }
 command = "qemu-system-x86_64"
-args = ["-cdrom", "${ROOT}/target/os.iso"]
-dependencies = ["iso"]
+args = ["@@split(QEMU_ARGS, )"]
+
+[tasks.qemu-test]
+condition = { env_true =  ["TEST"] }
+command = "qemu-system-x86_64"
+args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_ARGS_TEST, )"]
+
+[tasks.check_env_test]
+private = true
+condition = { env_contains = { "CARGO_MAKE_TASK_ARGS" = "deps/" }}
+env = { "TEST" = true }
 
 [tasks.iso]
 script = [
     "mkdir -p ${ROOT}/target/isofiles/boot/grub",
-    "cp ${ROOT}/target/x86_64-os/debug/os ${ROOT}/target/isofiles/boot/os.bin",
+    "cp ${CARGO_MAKE_TASK_ARGS} ${ROOT}/target/isofiles/boot/os.bin",
     "cp ${ROOT}/src/arch/x86_64/grub.cfg ${ROOT}/target/isofiles/boot/grub",
     "grub-mkrescue -o ${ROOT}/target/os.iso ${ROOT}/target/isofiles 2> /dev/null",
     "rm -r ${ROOT}/target/isofiles"

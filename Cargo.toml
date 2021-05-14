@@ -4,9 +4,6 @@ edition = "2018"
 name = "os"
 version = "0.1.0"
 
-[build-dependencies]
-llvm-tools = "0.1"
-
 [dependencies]
 spin = "*"
 bit_field = "*"

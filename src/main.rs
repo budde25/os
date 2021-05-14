@@ -9,6 +9,7 @@
     llvm_asm
 )]
 #![test_runner(crate::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 global_asm!(include_str!("arch/x86_64/boot_32.s"));
 global_asm!(include_str!("arch/x86_64/boot_64.s"));
@@ -17,13 +18,17 @@ mod interrupts;
 mod vga;
 
 #[no_mangle]
-pub extern "C" fn kmain() {
+pub extern "C" fn kmain() -> ! {
     // Main should initialize all sub-systems and get
     // ready to start scheduling. The last thing this
     // should do is start the timer.
     interrupts::init();
 
-    println!("Did not crash");
+    // divide_by_zero();
+    println!("Hello World");
+
+    #[cfg(test)]
+    test_main();
 
     loop {}
 }
@@ -65,4 +70,11 @@ fn test_runner(tests: &[&dyn Fn()]) {
     for test in tests {
         test();
     }
+}
+
+#[test_case]
+fn trivial_assertion() {
+    print!("trivial assertion...");
+    assert_eq!(1, 1);
+    println!("[ok]");
 }

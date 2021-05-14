@@ -1,7 +1,7 @@
 use bit_field::BitField;
-use lazy_static::lazy_static;
 
-enum PrivilegeLevel {
+#[allow(dead_code)]
+pub enum PrivilegeLevel {
     Ring0 = 0,
     Ring1 = 1,
     Ring2 = 2,
@@ -46,7 +46,7 @@ struct DescriptorTablePointer {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-struct IDTDescriptor {
+pub struct IDTDescriptor {
     handler_low: u16,          // offset bits 0..15
     selector: SegmentSelector, // a code segment selector in GDT or LDT
     options: IDTOptions,       // type and attributes
@@ -84,21 +84,21 @@ impl IDTDescriptor {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
-struct SegmentSelector(u16);
+pub struct SegmentSelector(u16);
 
 impl SegmentSelector {
     fn zero() -> Self {
         Self(0)
     }
 
-    fn new(index: u16, level: PrivilegeLevel) -> Self {
+    pub fn new(index: u16, level: PrivilegeLevel) -> Self {
         let mut selector = Self::zero();
         selector.set_priviledge_level(level);
         selector.set_index(index);
         selector
     }
 
-    fn set_priviledge_level(&mut self, level: PrivilegeLevel) {
+    pub fn set_priviledge_level(&mut self, level: PrivilegeLevel) {
         self.0.set_bits(0..1, level as u16);
     }
 
@@ -115,7 +115,7 @@ impl SegmentSelector {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
-struct IDTOptions(u16);
+pub struct IDTOptions(u16);
 
 impl IDTOptions {
     /// All bits zero except the ones that must be one
@@ -126,30 +126,30 @@ impl IDTOptions {
     }
 
     /// Create new set of options
-    fn new(present: bool, disable: bool) -> Self {
+    pub fn new(present: bool, disable: bool) -> Self {
         let mut options = Self::zero();
         options.set_present(present);
-        options.set_present(disable);
+        options.disable_interrupts(disable);
         options
     }
 
     /// Set present
-    fn set_present(&mut self, present: bool) {
+    pub fn set_present(&mut self, present: bool) {
         self.0.set_bit(15, present);
     }
 
     /// Disable interrupts
-    fn disable_interrupts(&mut self, disable: bool) {
+    pub fn disable_interrupts(&mut self, disable: bool) {
         self.0.set_bit(8, !disable);
     }
 
     /// Set the privilege level 0-3
-    fn set_priviledge_level(&mut self, dpl: u16) {
+    pub fn set_priviledge_level(&mut self, dpl: u16) {
         self.0.set_bits(13..15, dpl);
     }
 
     /// Set stack index level 0 = None, 1-7 valid stacks
-    fn set_stack_index(&mut self, index: u16) {
+    pub fn set_stack_index(&mut self, index: u16) {
         self.0.set_bits(0..3, index);
     }
 }
