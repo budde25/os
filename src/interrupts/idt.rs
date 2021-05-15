@@ -86,6 +86,7 @@ impl IDTDescriptor {
 #[repr(transparent)]
 pub struct SegmentSelector(u16);
 
+#[allow(dead_code)]
 impl SegmentSelector {
     fn zero() -> Self {
         Self(0)
@@ -117,6 +118,7 @@ impl SegmentSelector {
 #[repr(transparent)]
 pub struct IDTOptions(u16);
 
+#[allow(dead_code)]
 impl IDTOptions {
     /// All bits zero except the ones that must be one
     fn zero() -> Self {

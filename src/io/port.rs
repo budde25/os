@@ -1,15 +1,18 @@
 use core::marker::PhantomData;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 #[repr(u32)]
 pub enum QemuExitCode {
     Success = 0x10,
     Failed = 0x11,
 }
 
+/// A port
 #[derive(Debug, Clone, Copy)]
 pub struct Port<T> {
     port: u16,
+    // phantom data allows type T
     phantom: PhantomData<T>,
 }
 
@@ -30,8 +33,11 @@ impl<T: PortIO> Port<T> {
     }
 }
 
+/// A port IO trait that lets us define what types can be used with port I/O
 pub trait PortIO {
+    /// lets you write to the port
     unsafe fn write(port: u16, value: Self);
+    /// let you read from the port
     unsafe fn read(port: u16) -> Self;
 }
 
