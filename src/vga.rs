@@ -187,6 +187,8 @@ macro_rules! println {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
+    use super::uart::UART;
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
+    UART.lock().write_fmt(args).unwrap();
 }

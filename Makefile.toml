@@ -3,8 +3,9 @@ DEV = false
 PROD = false
 TEST = false
 ROOT = "${CARGO_MAKE_WORKING_DIRECTORY}"
-QEMU_ARGS = ["-cdrom ${ROOT}/target/os.iso"]
+QEMU_ARGS = ["-serial mon:stdio"]
 QEMU_ARGS_TEST = ["-device isa-debug-exit,iobase=0xf4,iosize=0x04"]
+QEMU_TARGET = ["-cdrom ${ROOT}/target/os.iso"]
 
 [env.development]
 DEV = true
@@ -23,12 +24,13 @@ dependencies = ["check_env_test"]
 [tasks.qemu]
 condition = { env_false = ["TEST"] }
 command = "qemu-system-x86_64"
-args = ["@@split(QEMU_ARGS, )"]
+args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_TARGET, )"]
 
 [tasks.qemu-test]
+ignore_errors = true
 condition = { env_true =  ["TEST"] }
 command = "qemu-system-x86_64"
-args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_ARGS_TEST, )"]
+args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_ARGS_TEST, )", "@@split(QEMU_TARGET, )"]
 
 [tasks.check_env_test]
 private = true

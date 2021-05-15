@@ -30,9 +30,9 @@ impl IDT {
             base: self as *const _ as u64,
             limit: (size_of::<Self>() - 1) as u16,
         };
-
+        let gdt = &mut ptr;
         unsafe {
-            asm!("lidt [{}]", in(reg) &mut ptr, options(nostack));
+            asm!("lidt [{}]", in(reg) gdt, options(nostack));
         }
     }
 }
