@@ -4,7 +4,7 @@ PROD = false
 TEST = false
 ROOT = "${CARGO_MAKE_WORKING_DIRECTORY}"
 QEMU_ARGS = ["-serial mon:stdio"]
-QEMU_ARGS_TEST = ["-device isa-debug-exit,iobase=0xf4,iosize=0x04"]
+QEMU_ARGS_TEST = ["-device isa-debug-exit,iobase=0xf4,iosize=0x04 -nographic"]
 QEMU_TARGET = ["-cdrom ${ROOT}/target/os.iso"]
 
 [env.development]

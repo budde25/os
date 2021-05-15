@@ -73,7 +73,7 @@ impl Uart {
 
     fn write_byte(&mut self, byte: u8) {
         unsafe {
-            while self.line_sts.read() & 0x20 != 0x0 {
+            while self.line_sts.read() & 0x20 == 0x0 {
                 core::hint::spin_loop();
             }
             self.data.write(byte);
