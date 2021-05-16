@@ -1,13 +1,6 @@
+use super::{DescriptorTablePointer, PrivilegeLevel, SegmentSelector};
 use bit_field::BitField;
 use core::fmt::{self, Debug, Formatter};
-
-#[allow(dead_code)]
-pub enum PrivilegeLevel {
-    Ring0 = 0,
-    Ring1 = 1,
-    Ring2 = 2,
-    Ring3 = 3,
-}
 
 pub type HandlerFunc = extern "C" fn() -> !;
 
@@ -37,13 +30,6 @@ impl InterruptDescriptorTable {
         }
         crate::println!("{:#?}", self);
     }
-}
-
-#[derive(Debug, Clone, Copy)]
-#[repr(C, packed)]
-struct DescriptorTablePointer {
-    base: u64,  // Base addr
-    limit: u16, // the inclusive limit from the base
 }
 
 #[derive(Clone, Copy)]
@@ -101,40 +87,6 @@ impl Debug for Entry {
         debug.field("handler", &self.get_handler());
         debug.field("options", &options);
         debug.finish()
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-#[repr(transparent)]
-pub struct SegmentSelector(u16);
-
-#[allow(dead_code)]
-impl SegmentSelector {
-    fn zero() -> Self {
-        Self(0)
-    }
-
-    pub fn new(index: u16, level: PrivilegeLevel) -> Self {
-        let mut selector = Self::zero();
-        selector.set_priviledge_level(level);
-        selector.set_index(index);
-        selector
-    }
-
-    pub fn set_priviledge_level(&mut self, level: PrivilegeLevel) {
-        self.0.set_bits(0..1, level as u16);
-    }
-
-    fn set_index(&mut self, index: u16) {
-        self.0.set_bits(3..15, index);
-    }
-
-    fn code_segment() -> Self {
-        let segment: u16;
-        unsafe {
-            asm!("mov {0:x}, cs", out(reg) segment, options(nostack, nomem, preserves_flags));
-        };
-        Self(segment)
     }
 }
 

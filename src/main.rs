@@ -23,11 +23,14 @@ pub extern "C" fn kmain() -> ! {
     // ready to start scheduling. The last thing this
     // should do is start the timer.
     interrupts::init();
-    unsafe {
-        asm!("sti", options(nomem, nostack));
-    }
+    //unsafe {
+    //asm!("sti", options(nomem, nostack));
+    //}
 
-    divide_by_zero();
+    //divide_by_zero();
+    //unsafe {
+    //   *(0xdeadbeef as *mut u64) = 42;
+    //};
 
     #[cfg(test)]
     test_main();
