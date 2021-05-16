@@ -12,7 +12,7 @@ long_mode:
     mov gs, ax    
 
     call kmain
-    # should hit this
+    # should never hit this
 
     # print `OKAY` to screen
     mov rax, 0x2f592f412f4b2f4f

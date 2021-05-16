@@ -3,7 +3,8 @@ DEV = false
 PROD = false
 TEST = false
 ROOT = "${CARGO_MAKE_WORKING_DIRECTORY}"
-QEMU_ARGS = ["-serial mon:stdio"]
+NOGRAPHIC = false
+QEMU_ARGS = ["-serial mon:stdio -nographic"]
 QEMU_ARGS_TEST = ["-device isa-debug-exit,iobase=0xf4,iosize=0x04 -display none"]
 QEMU_TARGET = ["-cdrom ${ROOT}/target/os.iso"]
 
@@ -18,15 +19,20 @@ command = "cargo"
 args = ["build"]
 
 [tasks.run]
-run_task = {name = ["iso", "qemu", "qemu-test"]}
+run_task = {name = ["iso", "qemu", "qemu_nographic", "qemu_test"]}
 dependencies = ["check_env_test"]
 
 [tasks.qemu]
-condition = { env_false = ["TEST"] }
+condition = { env_false = ["TEST", "NOGRAPHIC"] }
 command = "qemu-system-x86_64"
 args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_TARGET, )"]
 
-[tasks.qemu-test]
+[tasks.qemu_nographic]
+condition = { env_true = ["NOGRAPHIC"], env_false = ["TEST"]}
+command = "qemu-system-x86_64"
+args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_TARGET, )", "-nographic"]
+
+[tasks.qemu_test]
 ignore_errors = true
 condition = { env_true =  ["TEST"] }
 command = "qemu-system-x86_64"

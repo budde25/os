@@ -23,13 +23,18 @@ pub extern "C" fn kmain() -> ! {
     // ready to start scheduling. The last thing this
     // should do is start the timer.
     interrupts::init();
+    unsafe {
+        asm!("sti", options(nomem, nostack));
+    }
 
-    // divide_by_zero();
+    divide_by_zero();
 
     #[cfg(test)]
     test_main();
 
     println!("Hello World");
+    let s = "Some test string that fits on a single line";
+    vgaln!("{}", s);
 
     loop {}
 }
@@ -62,7 +67,16 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 }
 
 #[no_mangle]
+#[cfg(not(test))]
 extern "C" fn abort() -> ! {
+    loop {}
+}
+
+#[no_mangle]
+#[cfg(test)]
+extern "C" fn abort() -> ! {
+    use io::port::QemuExitCode;
+    exit_qemu(QemuExitCode::Failed as u32);
     loop {}
 }
 

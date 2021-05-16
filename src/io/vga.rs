@@ -165,3 +165,23 @@ impl fmt::Write for Writer {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::VGA;
+    use crate::vga;
+
+    #[test_case]
+    fn test_println_simple() {
+        VGA.lock().clear_screen();
+        vga!("test_vga_simple output");
+    }
+
+    #[test_case]
+    fn test_println_many() {
+        VGA.lock().clear_screen();
+        for _ in 0..200 {
+            vga!("test_vga_many output");
+        }
+    }
+}
