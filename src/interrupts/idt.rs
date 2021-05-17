@@ -170,3 +170,21 @@ impl Debug for Options {
         debug.finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::mem::size_of;
+
+    /// Make sure the entry struct is getting correctly packed
+    #[test_case]
+    fn entry_struct_size() {
+        assert_eq!(size_of::<Entry>(), 16);
+    }
+
+    /// Make sure the idt struct is getting correctly packed
+    #[test_case]
+    fn idt_struct_size() {
+        assert_eq!(size_of::<InterruptDescriptorTable>(), 16 * 16);
+    }
+}

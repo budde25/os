@@ -91,3 +91,6 @@ pub fn init() {
     GDT.load();
     IDT.load();
 }
+
+#[cfg(test)]
+mod tests {}
