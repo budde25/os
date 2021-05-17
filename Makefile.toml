@@ -1,8 +1,62 @@
+[env]
+DEV = false
+PROD = false
+TEST = false
+ROOT = "${CARGO_MAKE_WORKING_DIRECTORY}"
+NOGRAPHIC = false
+QEMU_ARGS = ["-serial mon:stdio -nographic"]
+QEMU_ARGS_TEST = ["-device isa-debug-exit,iobase=0xf4,iosize=0x04 -display none"]
+QEMU_TARGET = ["-cdrom ${ROOT}/target/os.iso"]
+
+[env.development]
+DEV = true
+
+[env.production]
+PROD = true
+
 [tasks.build]
 command = "cargo"
-args = ["objcopy", "--", "-I", "elf64-x86-64", "-O", "binary", "--binary-architecture=i386:x86-64", "target/x86_64-os/debug/os.bin"]
+args = ["build"]
 
 [tasks.run]
+run_task = {name = ["iso", "qemu", "qemu_nographic", "qemu_test"]}
+dependencies = ["check_env_test"]
+
+[tasks.qemu]
+condition = { env_false = ["TEST", "NOGRAPHIC"] }
 command = "qemu-system-x86_64"
-args = ["-drive", "format=raw,file=target/x86_64-os/debug/os.bin"]
+args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_TARGET, )"]
+
+[tasks.qemu_nographic]
+condition = { env_true = ["NOGRAPHIC"], env_false = ["TEST"]}
+command = "qemu-system-x86_64"
+args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_TARGET, )", "-nographic"]
+
+[tasks.qemu_test]
+ignore_errors = true
+condition = { env_true =  ["TEST"] }
+command = "qemu-system-x86_64"
+args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_ARGS_TEST, )", "@@split(QEMU_TARGET, )"]
+
+[tasks.check_env_test]
+private = true
+condition = { env_contains = { "CARGO_MAKE_TASK_ARGS" = "deps/" }}
+env = { "TEST" = true }
+
+[tasks.iso]
+script = [
+    "mkdir -p ${ROOT}/target/isofiles/boot/grub",
+    "cp ${CARGO_MAKE_TASK_ARGS} ${ROOT}/target/isofiles/boot/os.bin",
+    "cp ${ROOT}/src/arch/x86_64/grub.cfg ${ROOT}/target/isofiles/boot/grub",
+    "grub-mkrescue -o ${ROOT}/target/os.iso ${ROOT}/target/isofiles 2> /dev/null",
+    "rm -r ${ROOT}/target/isofiles"
+]
 dependencies = ["build"]
+
+[tasks.test-multiboot2]
+condition = { fail_message = "Not multiboot2" }
+condition_script = [
+    "exit 1"
+]
+command = "grub-file"
+args = ["--is-x86_64-multiboot2 ${ROOT}/target/x86_64-os/debug/os"]

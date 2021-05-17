@@ -1,52 +1,50 @@
 #![no_std]
 #![no_main]
-#![feature(panic_info_message, asm, global_asm, lang_items)]
+#![feature(
+    panic_info_message,
+    asm,
+    global_asm,
+    lang_items,
+    custom_test_frameworks,
+    llvm_asm
+)]
+#![test_runner(crate::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
-global_asm!(include_str!("arch/x86_64/boot_1.s"));
-global_asm!(include_str!("arch/x86_64/boot_2.s"));
-global_asm!(include_str!("arch/x86_64/boot_3.s"));
+global_asm!(include_str!("arch/x86_64/boot_32.s"));
+global_asm!(include_str!("arch/x86_64/boot_64.s"));
 
-mod vga;
+mod interrupts;
+mod io;
 
 #[no_mangle]
-pub extern "C" fn kmain() {
+pub extern "C" fn kmain() -> ! {
     // Main should initialize all sub-systems and get
     // ready to start scheduling. The last thing this
     // should do is start the timer.
+    interrupts::init();
+    //unsafe {
+    //asm!("sti", options(nomem, nostack));
+    //}
 
-    // loop {}
+    //divide_by_zero();
+    //unsafe {
+    //   *(0xdeadbeef as *mut u64) = 42;
+    //};
 
-    let hello = b"Hello World!";
-    let color_byte = 0x1f; // white foreground, blue background
+    #[cfg(test)]
+    test_main();
 
-    let mut hello_colored = [color_byte; 24];
-    for (i, char_byte) in hello.into_iter().enumerate() {
-        hello_colored[i * 2] = *char_byte;
-    }
-
-    // write `Hello World!` to the center of the VGA text buffer
-    let buffer_ptr = (0xb8000 + 1988) as *mut _;
-    unsafe { *buffer_ptr = hello_colored };
+    println!("Hello World");
+    let s = "Some test string that fits on a single line";
+    vgaln!("{}", s);
 
     loop {}
 }
 
-#[macro_export]
-macro_rules! print {
-    ($($args:tt)+) => {{}};
-}
-#[macro_export]
-macro_rules! println
-{
-	() => ({
-		print!("\r\n")
-	});
-	($fmt:expr) => ({
-		print!(concat!($fmt, "\r\n"))
-	});
-	($fmt:expr, $($args:tt)+) => ({
-		print!(concat!($fmt, "\r\n"), $($args)+)
-	});
+#[allow(dead_code)]
+fn divide_by_zero() {
+    unsafe { llvm_asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel") }
 }
 
 #[lang = "eh_personality"]
@@ -72,6 +70,55 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 }
 
 #[no_mangle]
+#[cfg(not(test))]
 extern "C" fn abort() -> ! {
     loop {}
+}
+
+#[no_mangle]
+#[cfg(test)]
+extern "C" fn abort() -> ! {
+    use io::port::QemuExitCode;
+    exit_qemu(QemuExitCode::Failed as u32);
+    loop {}
+}
+
+pub fn exit_qemu(exit_code: u32) {
+    use io::port::Port;
+    unsafe {
+        let port = Port::new(0xf4);
+        port.write(exit_code as u32);
+    }
+}
+
+#[cfg(test)]
+fn test_runner(tests: &[&dyn Testable]) {
+    use io::port::QemuExitCode;
+    println!("Running {} tests", tests.len());
+    for test in tests {
+        test.run();
+    }
+    exit_qemu(QemuExitCode::Success as u32)
+}
+
+pub trait Testable {
+    fn run(&self) -> ();
+}
+
+impl<T> Testable for T
+where
+    T: Fn(),
+{
+    fn run(&self) {
+        print!("{}...\t", core::any::type_name::<T>());
+        self();
+        println!("[ok]");
+    }
+}
+
+mod tests {
+    #[test_case]
+    fn trivial_assertion() {
+        assert_eq!(1, 1);
+    }
 }
