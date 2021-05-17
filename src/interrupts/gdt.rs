@@ -247,3 +247,21 @@ impl Debug for Flags {
         debug.finish()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::mem::size_of;
+
+    /// Make sure the entry struct is getting correctly packed
+    #[test_case]
+    fn entry_struct_size() {
+        assert_eq!(size_of::<Entry>(), 8);
+    }
+
+    /// Make sure the gdt struct is getting correctly packed
+    #[test_case]
+    fn gdt_struct_size() {
+        assert_eq!(size_of::<GlobalDescriptorTable>(), 8 * 5);
+    }
+}
