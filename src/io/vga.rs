@@ -72,13 +72,13 @@ impl Buffer {
     }
 }
 
-pub struct Writer {
+pub struct Vga {
     column_position: usize,
     color_code: ColorCode,
     buffer: &'static mut Buffer,
 }
 
-impl Default for Writer {
+impl Default for Vga {
     fn default() -> Self {
         Self {
             column_position: 0,
@@ -89,7 +89,7 @@ impl Default for Writer {
     }
 }
 
-impl Writer {
+impl Vga {
     fn write_byte(&mut self, byte: u8) {
         match byte {
             b'\n' => self.new_line(),
@@ -159,7 +159,7 @@ impl Writer {
     }
 }
 
-impl fmt::Write for Writer {
+impl fmt::Write for Vga {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.write_string(s);
         Ok(())
