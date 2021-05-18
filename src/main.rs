@@ -28,7 +28,7 @@ pub extern "C" fn kmain() -> ! {
     //asm!("sti", options(nomem, nostack));
     //}
 
-    //divide_by_zero();
+    divide_by_zero();
     //unsafe {
     //   *(0xdeadbeef as *mut u64) = 42;
     //};

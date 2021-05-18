@@ -20,8 +20,8 @@ pub enum PrivilegeLevel {
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct DescriptorTablePointer {
-    base: u64,  // Base addr
     limit: u16, // the inclusive limit from the base
+    base: u64,  // Base addr
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -88,7 +88,7 @@ lazy_static! {
 }
 
 pub fn init() {
-    GDT.load();
+    //    GDT.load();
     IDT.load();
 }
 

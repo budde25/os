@@ -6,6 +6,8 @@ pub type HandlerFunc = extern "C" fn() -> !;
 
 /// Interrupt Descriptor Table
 #[derive(Debug)]
+#[repr(C)]
+#[repr(align(16))]
 pub struct InterruptDescriptorTable([Entry; 16]);
 
 impl InterruptDescriptorTable {
@@ -20,13 +22,12 @@ impl InterruptDescriptorTable {
 
     pub fn load(&'static self) {
         use core::mem::size_of;
-        let mut ptr = DescriptorTablePointer {
+        let ptr = DescriptorTablePointer {
             base: self as *const _ as u64,
             limit: (size_of::<Self>() - 1) as u16,
         };
-        let gdt = &mut ptr;
         unsafe {
-            asm!("lidt [{}]", in(reg) gdt, options(nostack));
+            asm!("lidt [{}]", in(reg) &ptr, options(readonly, nostack, preserves_flags));
         }
         crate::println!("{:#?}", self);
     }

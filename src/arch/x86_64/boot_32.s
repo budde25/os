@@ -173,7 +173,7 @@ enable_paging:
     ret
 
 load_gdt64:
-    lgdt gdt_64_pointer
+    lgdt [gdt_64_pointer]
     ret
 
 # prints 'Err: ' and an error code stored in al regiester
@@ -196,7 +196,9 @@ error_3_str: # failed the jump to long mode
 .section .rodata
 gdt_64:
     .quad 0x0000000000000000          # Null Descriptor - should be present.
+gdt_code:
     .quad 0x00209A0000000000          # 64-bit code descriptor (exec/read).
+gdt_data:
     .quad 0x0000920000000000          # 64-bit data descriptor (read/write).
 .align 4
     .word 0                              # Padding to make the "address of the GDT" field aligned on a 4-byte boundary
