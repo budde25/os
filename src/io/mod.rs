@@ -31,7 +31,18 @@ lazy_static! {
     };
 }
 
+#[allow(dead_code)]
+pub fn disable_uart() {
+    UART.lock().disable();
+}
+
+#[allow(dead_code)]
+pub fn enable_uart() {
+    UART.lock().enable();
+}
+
 /// disables the PIC's
+#[allow(dead_code)]
 pub fn disable_pic() {
     PIC_1.lock().diable();
     PIC_2.lock().diable();

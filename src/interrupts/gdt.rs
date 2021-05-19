@@ -27,8 +27,6 @@ impl GlobalDescriptorTable {
         unsafe {
             asm!("lgdt [{}]", in(reg) gdt, options(nostack));
         }
-
-        crate::println!("{:#?}", self);
     }
 }
 

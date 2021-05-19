@@ -2,10 +2,24 @@ use bit_field::BitField;
 use lazy_static::lazy_static;
 
 use crate::interrupts::gdt::Flags;
+use handlers::ExceptionStackFrame;
 
 mod gdt;
 mod handlers;
 mod idt;
+
+pub trait Handler {}
+
+pub type HandlerFunc = extern "x86-interrupt" fn(_: ExceptionStackFrame);
+pub type HandlerFuncErrorCode = extern "x86-interrupt" fn(_: ExceptionStackFrame, _: u64);
+pub type DivergingHandlerFuncErrorCode =
+    extern "x86-interrupt" fn(_: ExceptionStackFrame, _: u64) -> !;
+pub type DivergingHandlerFunc = extern "x86-interrupt" fn(_: ExceptionStackFrame) -> !;
+
+impl Handler for HandlerFunc {}
+impl Handler for HandlerFuncErrorCode {}
+impl Handler for DivergingHandlerFunc {}
+impl Handler for DivergingHandlerFuncErrorCode {}
 
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
@@ -59,11 +73,24 @@ impl SegmentSelector {
 }
 
 lazy_static! {
+    /// 0, Divide By Zero
+    /// 1, Debug
+    /// 2, Non Maskable Interrupt
+    /// 3, Breakpoint
+    /// 4, Overflow
+    /// 5, Bounds Range Exceeded
+    /// 6, Invalid Opcode
+    /// 7, Device Not Available
+    /// 8, Double Fault
+    /// 10, Invalid TSS
+    /// 11, Segment Not Present
+    /// 12, Stack Segment Fault
+    /// 13, General Protection Fault
+    /// 14, Page Fault
     static ref IDT: idt::InterruptDescriptorTable = {
         let mut idt = idt::InterruptDescriptorTable::new();
-        idt.set_handler(0, handlers::divide_by_zero);
-        idt.set_handler(8, handlers::divide_by_zero);
-        idt.set_handler(14, handlers::divide_by_zero);
+        idt.breakpoint.set_handler(handlers::breakpoint);
+        idt.double_fault.set_handler(handlers::double_fault);
         idt
     };
 }
@@ -93,4 +120,23 @@ pub fn init() {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use crate::io::*;
+    #[test_case]
+    fn page_fault() {
+        // trigger a page fault
+        unsafe {
+            //*(0xdeadbeef as *mut u64) = 42;
+        };
+    }
+
+    /// Checks that we handle a breakpoint exeception by just returning
+    #[test_case]
+    fn breakpoint() {
+        disable_uart();
+        unsafe {
+            asm!("int 3");
+        }
+        enable_uart();
+    }
+}

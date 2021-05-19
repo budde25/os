@@ -6,10 +6,12 @@
     global_asm,
     lang_items,
     custom_test_frameworks,
-    llvm_asm
+    llvm_asm,
+    abi_x86_interrupt
 )]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+#![allow(dead_code)]
 
 global_asm!(include_str!("arch/x86_64/boot_32.s"));
 global_asm!(include_str!("arch/x86_64/boot_64.s"));
@@ -24,14 +26,6 @@ pub extern "C" fn kmain() -> ! {
     // ready to start scheduling. The last thing this
     // should do is start the timer.
     interrupts::init();
-    //unsafe {
-    //asm!("sti", options(nomem, nostack));
-    //}
-
-    divide_by_zero();
-    //unsafe {
-    //   *(0xdeadbeef as *mut u64) = 42;
-    //};
 
     #[cfg(test)]
     test_main();

@@ -63,6 +63,18 @@ impl Uart {
         self.modem_ctrl.write(0x0F);
     }
 
+    pub fn disable(&mut self) {
+        unsafe {
+            self.modem_ctrl.write(0x1E); // Set in loopback mode
+        }
+    }
+
+    pub fn enable(&mut self) {
+        unsafe {
+            self.modem_ctrl.write(0x0F); // Set in loopback mode
+        }
+    }
+
     fn write_byte(&mut self, byte: u8) {
         unsafe {
             while self.line_sts.read() & 0x20 == 0x0 {

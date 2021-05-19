@@ -1,23 +1,74 @@
-use super::{DescriptorTablePointer, PrivilegeLevel, SegmentSelector};
+use super::{
+    DescriptorTablePointer, DivergingHandlerFunc, DivergingHandlerFuncErrorCode, HandlerFunc,
+    HandlerFuncErrorCode, SegmentSelector,
+};
 use bit_field::BitField;
-use core::fmt::{self, Debug, Formatter};
-
-pub type HandlerFunc = extern "C" fn() -> !;
+use core::{
+    fmt::{self, Debug, Formatter},
+    marker::PhantomData,
+};
 
 /// Interrupt Descriptor Table
 #[derive(Debug)]
 #[repr(C)]
 #[repr(align(16))]
-pub struct InterruptDescriptorTable([Entry; 16]);
+pub struct InterruptDescriptorTable {
+    pub divide_by_zero: Entry<HandlerFunc>,
+    pub debug: Entry<HandlerFunc>,
+    pub non_maskable_interrupt: Entry<HandlerFunc>,
+    pub breakpoint: Entry<HandlerFunc>,
+    pub overflow: Entry<HandlerFunc>,
+    pub bound_range_exceeded: Entry<HandlerFunc>,
+    pub invalid_opcode: Entry<HandlerFunc>,
+    pub device_not_available: Entry<HandlerFunc>,
+    pub double_fault: Entry<DivergingHandlerFuncErrorCode>,
+    coprocessor_segment_overrun: Entry<HandlerFunc>,
+    pub invalid_tss: Entry<HandlerFuncErrorCode>,
+    pub segment_not_present: Entry<HandlerFuncErrorCode>,
+    pub stack_segment_fault: Entry<HandlerFuncErrorCode>,
+    pub general_protection_fault: Entry<HandlerFuncErrorCode>,
+    pub page_fault: Entry<HandlerFuncErrorCode>,
+    reserved_1: Entry<HandlerFunc>,
+    pub x87_floating_point: Entry<HandlerFunc>,
+    pub alignment_check: Entry<HandlerFuncErrorCode>,
+    pub machine_check: Entry<DivergingHandlerFunc>,
+    pub simd_floating_point: Entry<HandlerFunc>,
+    pub virtualization: Entry<HandlerFunc>,
+    reserved_2: [Entry<HandlerFunc>; 9],
+    pub security_exception: Entry<HandlerFuncErrorCode>,
+    reserved_3: Entry<HandlerFunc>,
+    interrupts: [Entry<HandlerFunc>; 256 - 32],
+}
 
 impl InterruptDescriptorTable {
     pub fn new() -> Self {
-        Self([Entry::empty(); 16])
-    }
-
-    pub fn set_handler(&mut self, index: u8, handler: HandlerFunc) {
-        let segment = SegmentSelector::code_segment();
-        self.0[index as usize] = Entry::new(segment, handler);
+        Self {
+            divide_by_zero: Entry::empty(),
+            debug: Entry::empty(),
+            non_maskable_interrupt: Entry::empty(),
+            breakpoint: Entry::empty(),
+            overflow: Entry::empty(),
+            bound_range_exceeded: Entry::empty(),
+            invalid_opcode: Entry::empty(),
+            device_not_available: Entry::empty(),
+            double_fault: Entry::empty(),
+            coprocessor_segment_overrun: Entry::empty(),
+            invalid_tss: Entry::empty(),
+            segment_not_present: Entry::empty(),
+            stack_segment_fault: Entry::empty(),
+            general_protection_fault: Entry::empty(),
+            page_fault: Entry::empty(),
+            reserved_1: Entry::empty(),
+            x87_floating_point: Entry::empty(),
+            alignment_check: Entry::empty(),
+            machine_check: Entry::empty(),
+            simd_floating_point: Entry::empty(),
+            virtualization: Entry::empty(),
+            reserved_2: [Entry::empty(); 9],
+            security_exception: Entry::empty(),
+            reserved_3: Entry::empty(),
+            interrupts: [Entry::empty(); 256 - 32],
+        }
     }
 
     pub fn load(&'static self) {
@@ -29,33 +80,29 @@ impl InterruptDescriptorTable {
         unsafe {
             asm!("lidt [{}]", in(reg) &ptr, options(readonly, nostack, preserves_flags));
         }
-        crate::println!("{:#?}", self);
     }
 }
 
 #[derive(Clone, Copy)]
-#[repr(C, packed)]
-pub struct Entry {
+#[repr(C)]
+pub struct Entry<T> {
     handler_low: u16,          // offset bits 0..15
     selector: SegmentSelector, // a code segment selector in GDT or LDT
     options: Options,          // type and attributes
     handler_middle: u16,       // offset bits 16..31
     handler_high: u32,         // offset bits 32..63
     zero: u32,                 // reserved
+    phantom: PhantomData<T>,
 }
 
-impl Entry {
-    /// Create a new present entry
-    fn new(selector: SegmentSelector, handler: HandlerFunc) -> Self {
-        let pointer = handler as u64;
-        Self {
-            selector,
-            handler_low: pointer as u16,
-            handler_middle: (pointer >> 16) as u16,
-            handler_high: (pointer >> 32) as u32,
-            options: Options::default(),
-            zero: 0,
-        }
+impl<T> Entry<T> {
+    /// Set a presnt entry with handler
+    fn set_handler_addr(&mut self, handler: u64) {
+        self.handler_low = handler as u16;
+        self.handler_middle = (handler >> 16) as u16;
+        self.handler_high = (handler >> 32) as u32;
+        self.options = Options::default();
+        self.selector = SegmentSelector::code_segment();
     }
 
     /// Create a non present entry
@@ -67,6 +114,7 @@ impl Entry {
             handler_high: 0,
             options: Options::zero(),
             zero: 0,
+            phantom: PhantomData,
         }
     }
 
@@ -78,7 +126,23 @@ impl Entry {
     }
 }
 
-impl Debug for Entry {
+macro_rules! impl_set_handler {
+    ($h:ty) => {
+        impl Entry<$h> {
+            pub fn set_handler(&mut self, handler: $h) {
+                self.set_handler_addr(handler as u64);
+            }
+        }
+    };
+}
+
+impl_set_handler!(HandlerFunc);
+impl_set_handler!(HandlerFuncErrorCode);
+//impl_set_handler!(PageFaultHandlerFunc);
+impl_set_handler!(DivergingHandlerFunc);
+impl_set_handler!(DivergingHandlerFuncErrorCode);
+
+impl<T> Debug for Entry<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let options = self.options;
         let selector = self.selector;
@@ -180,12 +244,12 @@ mod tests {
     /// Make sure the entry struct is getting correctly packed
     #[test_case]
     fn entry_struct_size() {
-        assert_eq!(size_of::<Entry>(), 16);
+        assert_eq!(size_of::<Entry<HandlerFunc>>(), 16);
     }
 
     /// Make sure the idt struct is getting correctly packed
     #[test_case]
     fn idt_struct_size() {
-        assert_eq!(size_of::<InterruptDescriptorTable>(), 16 * 16);
+        assert_eq!(size_of::<InterruptDescriptorTable>(), 16 * 256);
     }
 }
