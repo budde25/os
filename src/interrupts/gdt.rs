@@ -1,33 +1,53 @@
 use crate::interrupts::DescriptorTablePointer;
 
-use super::PrivilegeLevel;
+use super::{PrivilegeLevel, SegmentSelector};
 use bit_field::BitField;
 use core::fmt::{self, Debug, Formatter};
 
 #[derive(Debug, Clone, Copy, Hash)]
 #[repr(C, packed)]
-pub struct GlobalDescriptorTable([Entry; 5]);
+pub struct GlobalDescriptorTable([Entry; 6]);
 
 impl GlobalDescriptorTable {
     pub fn new() -> Self {
-        Self([Entry::empty(); 5])
+        Self([Entry::empty(); 6])
     }
 
-    pub fn set_entry(&mut self, index: u8, entry: Entry) {
+    pub fn set_entry(&mut self, index: u8, entry: Entry) -> SegmentSelector {
         self.0[index as usize] = entry;
+        // TODO support more then just ring0
+        SegmentSelector::new(index as u16, PrivilegeLevel::Ring0)
     }
 
     pub fn load(&'static self) {
         use core::mem::size_of;
-        let mut ptr = DescriptorTablePointer {
-            base: self as *const _ as u64,
+        let ptr = DescriptorTablePointer {
+            base: self.0.as_ptr() as u64,
             limit: (size_of::<Self>() - 1) as u16,
         };
-        let gdt = &mut ptr;
         unsafe {
-            asm!("lgdt [{}]", in(reg) gdt, options(nostack));
+            asm!("lgdt [{}]", in(reg) &ptr, options(nostack, readonly, preserves_flags));
         }
     }
+}
+
+#[inline]
+pub unsafe fn load_cs(segment: SegmentSelector) {
+    asm!(
+        "push {sel}",
+        "lea {tmp}, [1f + rip]",
+        "push {tmp}",
+        "retfq",
+        "1:",
+        sel = in(reg) u64::from(segment.0),
+        tmp = lateout(reg) _,
+        options(preserves_flags),
+    );
+}
+
+#[inline]
+pub unsafe fn load_tss(segment: SegmentSelector) {
+    asm!("ltr {0:x}", in(reg) segment.0, options(nomem, nostack, preserves_flags));
 }
 
 #[derive(Clone, Copy, Hash)]
@@ -99,6 +119,10 @@ impl Flags {
     /// An zero entry
     fn zero() -> Self {
         Self(0)
+    }
+
+    pub fn from_u16(num: u16) -> Self {
+        Self(num)
     }
 
     pub fn code_ring_zero() -> Self {
@@ -260,6 +284,6 @@ mod tests {
     /// Make sure the gdt struct is getting correctly packed
     #[test_case]
     fn gdt_struct_size() {
-        assert_eq!(size_of::<GlobalDescriptorTable>(), 8 * 5);
+        assert_eq!(size_of::<GlobalDescriptorTable>(), 8 * 6);
     }
 }

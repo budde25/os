@@ -1,12 +1,15 @@
+use core::mem::size_of;
+
 use bit_field::BitField;
 use lazy_static::lazy_static;
 
-use crate::interrupts::gdt::Flags;
+use gdt::GlobalDescriptorTable;
 use handlers::ExceptionStackFrame;
 
 mod gdt;
 mod handlers;
 mod idt;
+mod tss;
 
 pub trait Handler {}
 
@@ -20,6 +23,11 @@ impl Handler for HandlerFunc {}
 impl Handler for HandlerFuncErrorCode {}
 impl Handler for DivergingHandlerFunc {}
 impl Handler for DivergingHandlerFuncErrorCode {}
+
+struct Selectors {
+    kernel_code_segment: SegmentSelector,
+    tss_segment: SegmentSelector,
+}
 
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone)]
@@ -72,51 +80,71 @@ impl SegmentSelector {
     }
 }
 
-lazy_static! {
-    /// 0, Divide By Zero
-    /// 1, Debug
-    /// 2, Non Maskable Interrupt
-    /// 3, Breakpoint
-    /// 4, Overflow
-    /// 5, Bounds Range Exceeded
-    /// 6, Invalid Opcode
-    /// 7, Device Not Available
-    /// 8, Double Fault
-    /// 10, Invalid TSS
-    /// 11, Segment Not Present
-    /// 12, Stack Segment Fault
-    /// 13, General Protection Fault
-    /// 14, Page Fault
-    static ref IDT: idt::InterruptDescriptorTable = {
-        let mut idt = idt::InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler(handlers::breakpoint);
-        idt.double_fault.set_handler(handlers::double_fault);
-        idt
-    };
-}
+static TSS: tss::TaskStateSegment = tss::TaskStateSegment::zero();
 
 lazy_static! {
-    static ref GDT: gdt::GlobalDescriptorTable = {
-        let mut gdt = gdt::GlobalDescriptorTable::new();
+    static ref IDT: idt::InterruptDescriptorTable = {
+        let mut idt = idt::InterruptDescriptorTable::new();
+        idt.divide_by_zero.set_handler(handlers::divide_by_zero);
+        idt.debug.set_handler(handlers::debug);
+        idt.non_maskable_interrupt.set_handler(handlers::non_maskable_interrupt);
+        idt.breakpoint.set_handler(handlers::breakpoint);
+        idt.overflow.set_handler(handlers::overflow);
+        idt.bound_range_exceeded.set_handler(handlers::bound_range_exceeded);
+        idt.invalid_opcode.set_handler(handlers::invalid_opcode);
+        idt.device_not_available.set_handler(handlers::device_not_available);
+        idt.double_fault.set_handler(handlers::double_fault);
+        idt.invalid_tss.set_handler(handlers::invalid_tss);
+        idt.segment_not_present.set_handler(handlers::segment_not_present);
+        idt.stack_segment_fault.set_handler(handlers::stack_segment_fault);
+        idt.general_protection_fault.set_handler(handlers::general_protection_fault);
+        idt.page_fault.set_handler(handlers::page_fault);
+        idt.x87_floating_point.set_handler(handlers::x87_floating_point);
+        idt.alignment_check.set_handler(handlers::alignment_check);
+        idt.machine_check.set_handler(handlers::machine_check);
+        idt.simd_floating_point.set_handler(handlers::simd_floating_point);
+        idt.virtualization.set_handler(handlers::virtualization);
+        idt.security_exception.set_handler(handlers::security_exception);
+        idt
+    };
+
+    static ref GDT: (gdt::GlobalDescriptorTable, Selectors) = {
+        use gdt::{Entry, Flags};
+
+        let mut gdt = GlobalDescriptorTable::new();
         // initialized to be empty and zero should be null anyway
-        gdt.set_entry(1, gdt::Entry::new(0, 0x000FFFFF, gdt::Flags::code_ring_zero()));
-        gdt.set_entry(2, gdt::Entry::new(0, 0x000FFFFF, gdt::Flags::data_ring_zero()));
+        let e = Entry::new(0, 0x000FFFFF, Flags::code_ring_zero());
+        let kernel_code_segment = gdt.set_entry(1, e);
+        gdt.set_entry(2, Entry::new(0, 0x000FFFFF, Flags::data_ring_zero()));
 
         let mut code_ring_three = Flags::code_ring_zero();
         code_ring_three.set_priviledge_level(PrivilegeLevel::Ring3);
         let mut data_ring_three = Flags::data_ring_zero();
         data_ring_three.set_priviledge_level(PrivilegeLevel::Ring3);
 
-        gdt.set_entry(3, gdt::Entry::new(0, 0x000FFFFF, code_ring_three));
-        gdt.set_entry(4, gdt::Entry::new(0, 0x000FFFFF, data_ring_three));
+        gdt.set_entry(3, Entry::new(0, 0x000FFFFF, code_ring_three));
+        gdt.set_entry(4, Entry::new(0, 0x000FFFFF, data_ring_three));
 
-        gdt
+        // tss
+        let ptr = &TSS as *const _ as u32;
+        let size = (size_of::<tss::TaskStateSegment>() - 1) as u32;
+        let tss_segment = gdt.set_entry(5, gdt::Entry::new(ptr, size, Flags::from_u16(0x89)));
+
+        (gdt, Selectors {kernel_code_segment, tss_segment})
     };
+
 }
 
 pub fn init() {
-    //    GDT.load();
+    GDT.0.load();
     IDT.load();
+
+    unsafe {
+        //asm!("cli", options(nomem, nostack));
+        //gdt::load_cs(GDT.1.kernel_code_segment);
+        //gdt::load_tss(GDT.1.tss_segment);
+        //asm!("sti", options(nomem, nostack));
+    }
 }
 
 #[cfg(test)]
@@ -124,10 +152,11 @@ mod tests {
     use crate::io::*;
     #[test_case]
     fn page_fault() {
-        // trigger a page fault
+        disable_uart();
         unsafe {
-            //*(0xdeadbeef as *mut u64) = 42;
+            *(0xdeadbeef as *mut u64) = 42;
         };
+        enable_uart();
     }
 
     /// Checks that we handle a breakpoint exeception by just returning

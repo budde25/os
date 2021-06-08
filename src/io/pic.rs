@@ -73,7 +73,7 @@ impl Pic {
     pub fn remap(&mut self, offset: u8, master: bool) {
         unsafe {
             // save mask
-            let mask: u8 = self.data.read();
+            let _mask: u8 = self.data.read();
             self.command.write(ICW1::INIT.bits() | ICW1::ICW4.bits());
             self.data.write(offset);
             match master {
