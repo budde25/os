@@ -1,16 +1,18 @@
+use crate::interrupts::tss::TaskStateSegment;
 use crate::interrupts::DescriptorTablePointer;
 
 use super::{PrivilegeLevel, SegmentSelector};
 use bit_field::BitField;
+use bitflags::bitflags;
 use core::fmt::{self, Debug, Formatter};
 
 #[derive(Debug, Clone, Copy, Hash)]
 #[repr(C, packed)]
-pub struct GlobalDescriptorTable([Entry; 6]);
+pub struct GlobalDescriptorTable([Entry; 7]);
 
 impl GlobalDescriptorTable {
     pub fn new() -> Self {
-        Self([Entry::empty(); 6])
+        Self([Entry::empty(); 7])
     }
 
     pub fn set_entry(&mut self, index: u8, entry: Entry) -> SegmentSelector {
@@ -19,12 +21,16 @@ impl GlobalDescriptorTable {
         SegmentSelector::new(index as u16, PrivilegeLevel::Ring0)
     }
 
-    pub fn load(&'static self) {
+    fn pointer(&self) -> DescriptorTablePointer {
         use core::mem::size_of;
-        let ptr = DescriptorTablePointer {
+        DescriptorTablePointer {
             base: self.0.as_ptr() as u64,
             limit: (size_of::<Self>() - 1) as u16,
-        };
+        }
+    }
+
+    pub fn load(&'static self) {
+        let ptr = self.pointer();
         unsafe {
             asm!("lgdt [{}]", in(reg) &ptr, options(nostack, readonly, preserves_flags));
         }
@@ -62,19 +68,48 @@ pub struct Entry {
 
 impl Entry {
     fn empty() -> Self {
-        Self::new(0, 0, Flags::zero())
+        Self::new(0, Flags::empty())
     }
 
-    pub fn new(base: u32, limit: u32, flags: Flags) -> Self {
-        let mut f = flags;
-        f.set_limit_2((limit >> 16) as u16);
+    pub fn new(base: u32, flags: Flags) -> Self {
+        // limit ignore in 64 so set it all to 1
+        let limit = u32::MAX;
+        let mut flags = flags;
+        flags.set_limit_2((limit >> 16) as u16);
+
         Self {
             limit_1: limit as u16,
             base_1: base as u16,
             base_2: (base >> 16) as u8,
-            flags: f,
+            flags,
             base_3: (base >> 24) as u8,
         }
+    }
+
+    pub fn tss(tss: &'static TaskStateSegment) -> (Self, Self) {
+        use core::mem::size_of;
+
+        let ptr = tss as *const _ as u64;
+
+        let mut low_flags = Flags::TSS;
+        low_flags.set_limit_2(0b1001);
+
+        let low = Self {
+            limit_1: (size_of::<TaskStateSegment>() - 1) as u16,
+            base_1: ptr.get_bits(0..16) as u16,
+            base_2: ptr.get_bits(16..24) as u8,
+            flags: low_flags,
+            base_3: ptr.get_bits(24..32) as u8,
+        };
+
+        let high = Self {
+            limit_1: ptr.get_bits(32..48) as u16,
+            base_1: ptr.get_bits(48..64) as u16,
+            base_2: 0,
+            flags: Flags::empty(),
+            base_3: 0,
+        };
+        (low, high)
     }
 }
 
@@ -95,185 +130,87 @@ impl Debug for Entry {
     }
 }
 
-/// Flag Bytes
-///
-/// Bit(s) | Name
-/// -----------
-/// 0      | Accessed
-/// 1      | Readable/Writeable
-/// 2      | Direction
-/// 3      | Executable
-/// 4      | Descriptor type
-/// 5, 6   | Privilege level
-/// 7      | Present
-/// 8:11   | Limit_2
-/// 13     | Code descriptor
-/// 14     | Size
-/// 15     | Granularity
-#[derive(Clone, Copy, Hash)]
-#[repr(transparent)]
-pub struct Flags(u16);
-
-#[allow(dead_code)]
-impl Flags {
-    /// An zero entry
-    fn zero() -> Self {
-        Self(0)
-    }
-
-    pub fn from_u16(num: u16) -> Self {
-        Self(num)
-    }
-
-    pub fn code_ring_zero() -> Self {
-        let mut flags = Self::zero();
-        flags.set_descriptor_type(true);
-        flags.set_present(true);
-        flags.set_granularity(true);
-        flags.set_granularity(true);
-        flags.set_executable(true);
-        flags.set_read_write(true);
-        flags
-    }
-
-    pub fn data_ring_zero() -> Self {
-        let mut flags = Self::zero();
-        flags.set_descriptor_type(true);
-        flags.set_present(true);
-        flags.set_granularity(true);
-        flags.set_granularity(true);
-        flags.set_read_write(true);
-        flags
-    }
-
-    fn set_granularity(&mut self, granularity: bool) {
-        self.0.set_bit(15, granularity);
-    }
-
-    fn is_granularity(&self) -> bool {
-        self.0.get_bit(15)
-    }
-
-    fn set_size(&mut self, size: bool) {
-        self.0.set_bit(14, size);
-    }
-
-    fn is_size(&self) -> bool {
-        self.0.get_bit(14)
-    }
-
-    /// reserved for data segments
-    fn set_code_descriptor(&mut self, code_descriptor: bool) {
-        if code_descriptor {
-            self.0.set_bit(13, true);
-            self.set_size(false);
-        } else {
-            self.0.set_bit(13, false);
-        }
-    }
-
-    fn is_code_descriptor(&self) -> bool {
-        self.0.get_bit(13)
-    }
-
-    fn set_limit_2(&mut self, limit_2: u16) {
-        self.0.set_bits(8..12, limit_2);
-    }
-
-    fn get_limit_2(&self) -> u16 {
-        self.0.get_bits(8..12)
-    }
-
-    pub fn set_present(&mut self, present: bool) {
-        self.0.set_bit(7, present);
-    }
-
-    fn is_present(&self) -> bool {
-        self.0.get_bit(7)
-    }
-
-    pub fn set_priviledge_level(&mut self, dpl: PrivilegeLevel) {
-        self.0.set_bits(5..7, dpl as u16);
-    }
-
-    fn get_priviledge_level(&self) -> u16 {
-        self.0.get_bits(5..7)
-    }
-
-    /// Should be true for code/data else false
-    fn set_descriptor_type(&mut self, descriptor_type: bool) {
-        self.0.set_bit(4, descriptor_type);
-    }
-
-    /// Returns true if it a code/data false otherwise
-    fn is_descriptor_type(&self) -> bool {
-        self.0.get_bit(4)
-    }
-
-    /// Should be true for code, false for data
-    fn set_executable(&mut self, executable: bool) {
-        self.0.set_bit(3, executable);
-    }
-
-    fn is_executable(&self) -> bool {
-        self.0.get_bit(3)
-    }
-
-    /// Should be true if you want the segment to grow down rather than up
-    fn set_direction_downward(&mut self, downward: bool) {
-        self.0.set_bit(2, downward);
-    }
-
-    fn is_direction_downward(&self) -> bool {
-        self.0.get_bit(2)
-    }
-
-    /// Readable bit for code selectors: Whether read access for this segment is allowed. Write access is never allowed for code segments.
-    /// Writable bit for data selectors: Whether write access for this segment is allowed. Read access is always allowed for data segments.
-    fn set_read_write(&mut self, read_write: bool) {
-        self.0.set_bit(1, read_write);
-    }
-
-    fn is_read_write(&self) -> bool {
-        self.0.get_bit(1)
-    }
-
-    fn is_accessed(&self) -> bool {
-        self.0.get_bit(0)
+bitflags! {
+    /// Flag Bytes
+    ///
+    /// Bit(s) | Name
+    /// -----------
+    /// 0      | Accessed
+    /// 1      | Readable/Writeable
+    /// 2      | Direction
+    /// 3      | Executable
+    /// 4      | Descriptor type
+    /// 5, 6   | Privilege level
+    /// 7      | Present
+    /// 8:11   | Limit_2
+    /// 13     | Code descriptor
+    /// 14     | Size
+    /// 15     | Granularity
+    pub struct Flags: u16 {
+        const ACCESSED  = 0x1; // Accessed
+        const WRITABLE  = 0x2; // Writeable
+        const CONFORMING = 0x4; // Conforming / Expand down
+        const EXECUTABLE = 0x8; // Executable
+        const DESCTYPE  = 0x10; // Descriptor type (0 for system, 1 for code/data)
+        const PRESENT   = 0x80; // Present
+        const SAVL      = 0x1000; // Available for system use
+        const LONG      = 0x2000; // Long mode
+        const SIZE      = 0x4000; // Size (0 for 16-bit, 1 for 32)
+        const GRANULATRITY = 0x8000; // Granularity (0 for 1B - 1MB, 1 for 4KB - 4GB)
+        const PRIVLEDGE_THREE = 0x60; // Privilege level 3
+        const LIMIT_TWO   = 0xF00;
     }
 }
 
-impl Debug for Flags {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let granularity = self.is_granularity();
-        let size = self.is_size();
-        let code_descriptor = self.is_code_descriptor();
-        let present = self.is_present();
-        let priviledge_level = self.get_priviledge_level();
-        let descriptor_type = self.is_descriptor_type();
-        let executable = self.is_executable();
-        let downward = self.is_direction_downward();
-        let read_write = self.is_read_write();
-        let accessed = self.is_accessed();
-        let mut debug = f.debug_struct("Access");
-        debug.field("accessed", &accessed);
-        debug.field("read_write", &read_write);
-        debug.field("grows_downward", &downward);
-        debug.field("executable", &executable);
-        debug.field("descriptor_type", &descriptor_type);
-        debug.field("priviledge_level", &priviledge_level);
-        debug.field("present", &present);
-        debug.field("code_descriptor", &code_descriptor);
-        debug.field("size", &size);
-        debug.field("granularity", &granularity);
-        debug.finish()
+#[allow(dead_code)]
+impl Flags {
+    const COMMON: Self = Self::from_bits_truncate(
+        Self::ACCESSED.bits
+            | Self::WRITABLE.bits
+            | Self::DESCTYPE.bits
+            | Self::PRESENT.bits
+            | Self::GRANULATRITY.bits
+            | Self::LIMIT_TWO.bits,
+    );
+
+    pub const CODE_PL_ZERO: Self =
+        Self::from_bits_truncate(Self::COMMON.bits | Self::EXECUTABLE.bits | Self::LONG.bits);
+
+    pub const DATA_PL_ZERO: Self = Self::from_bits_truncate(Self::COMMON.bits | Self::SIZE.bits);
+
+    pub const CODE_PL_THREE: Self =
+        Self::from_bits_truncate(Self::CODE_PL_ZERO.bits | Self::PRIVLEDGE_THREE.bits);
+
+    pub const DATA_PL_THREE: Self =
+        Self::from_bits_truncate(Self::DATA_PL_ZERO.bits | Self::PRIVLEDGE_THREE.bits);
+
+    pub const TSS: Self = Self::from_bits_truncate(
+        Self::EXECUTABLE.bits | Self::ACCESSED.bits | Self::PRESENT.bits | Self::SIZE.bits,
+    );
+
+    fn get_limit_2(&self) -> u16 {
+        self.bits.get_bits(8..12)
+    }
+
+    fn set_limit_2(&mut self, value: u16) {
+        if value < 0b1111 {
+            self.bits.set_bits(8..12, value);
+        } else {
+            self.bits.set_bits(8..12, 0b1111);
+        }
+    }
+}
+
+impl From<u16> for Flags {
+    fn from(num: u16) -> Self {
+        unsafe { Flags::from_bits_unchecked(num) }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::mem::size_of;
+    use core::mem::{size_of, transmute};
 
     /// Make sure the entry struct is getting correctly packed
     #[test_case]
@@ -284,6 +221,23 @@ mod tests {
     /// Make sure the gdt struct is getting correctly packed
     #[test_case]
     fn gdt_struct_size() {
-        assert_eq!(size_of::<GlobalDescriptorTable>(), 8 * 6);
+        assert_eq!(size_of::<GlobalDescriptorTable>(), 8 * 7);
+    }
+
+    /// Linux deafaults
+    #[test_case]
+    #[rustfmt::skip]
+    fn linux_defaults() {
+        let code_pl_zero: u64 = unsafe{ transmute(Entry::new(0, Flags::CODE_PL_ZERO)) };
+        assert_eq!(code_pl_zero, 0x00af9b000000ffff);
+
+        let data_pl_zero: u64 = unsafe{ transmute(Entry::new(0, Flags::DATA_PL_ZERO)) };
+        assert_eq!(data_pl_zero, 0x00cf93000000ffff);
+
+        let code_pl_three: u64 = unsafe{ transmute(Entry::new(0, Flags::CODE_PL_THREE)) };
+        assert_eq!(code_pl_three, 0x00affb000000ffff);
+        
+        let data_pl_three: u64 = unsafe{ transmute(Entry::new(0, Flags::DATA_PL_THREE)) };
+        assert_eq!(data_pl_three, 0x00cff3000000ffff);
     }
 }

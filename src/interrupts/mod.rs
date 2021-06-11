@@ -1,10 +1,10 @@
-use core::mem::size_of;
-
 use bit_field::BitField;
 use lazy_static::lazy_static;
 
 use gdt::GlobalDescriptorTable;
 use handlers::ExceptionStackFrame;
+
+use tss::TaskStateSegment;
 
 mod gdt;
 mod handlers;
@@ -18,6 +18,8 @@ pub type HandlerFuncErrorCode = extern "x86-interrupt" fn(_: ExceptionStackFrame
 pub type DivergingHandlerFuncErrorCode =
     extern "x86-interrupt" fn(_: ExceptionStackFrame, _: u64) -> !;
 pub type DivergingHandlerFunc = extern "x86-interrupt" fn(_: ExceptionStackFrame) -> !;
+
+pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 
 impl Handler for HandlerFunc {}
 impl Handler for HandlerFuncErrorCode {}
@@ -80,8 +82,6 @@ impl SegmentSelector {
     }
 }
 
-static TSS: tss::TaskStateSegment = tss::TaskStateSegment::zero();
-
 lazy_static! {
     static ref IDT: idt::InterruptDescriptorTable = {
         let mut idt = idt::InterruptDescriptorTable::new();
@@ -112,25 +112,33 @@ lazy_static! {
         use gdt::{Entry, Flags};
 
         let mut gdt = GlobalDescriptorTable::new();
+
         // initialized to be empty and zero should be null anyway
-        let e = Entry::new(0, 0x000FFFFF, Flags::code_ring_zero());
-        let kernel_code_segment = gdt.set_entry(1, e);
-        gdt.set_entry(2, Entry::new(0, 0x000FFFFF, Flags::data_ring_zero()));
-
-        let mut code_ring_three = Flags::code_ring_zero();
-        code_ring_three.set_priviledge_level(PrivilegeLevel::Ring3);
-        let mut data_ring_three = Flags::data_ring_zero();
-        data_ring_three.set_priviledge_level(PrivilegeLevel::Ring3);
-
-        gdt.set_entry(3, Entry::new(0, 0x000FFFFF, code_ring_three));
-        gdt.set_entry(4, Entry::new(0, 0x000FFFFF, data_ring_three));
+        let kernel_code_segment = gdt.set_entry(1, Entry::new(0, Flags::CODE_PL_ZERO));
+        gdt.set_entry(2, Entry::new(0, Flags::DATA_PL_ZERO));
+        gdt.set_entry(3, Entry::new(0, Flags::CODE_PL_THREE));
+        gdt.set_entry(4, Entry::new(0, Flags::DATA_PL_THREE));
 
         // tss
-        let ptr = &TSS as *const _ as u32;
-        let size = (size_of::<tss::TaskStateSegment>() - 1) as u32;
-        let tss_segment = gdt.set_entry(5, gdt::Entry::new(ptr, size, Flags::from_u16(0x89)));
+        let (tss_segment_1, tss_segment_2) = Entry::tss(&TSS);
+        let tss_segment = gdt.set_entry(5, tss_segment_1);
+        gdt.set_entry(6, tss_segment_2);
 
         (gdt, Selectors {kernel_code_segment, tss_segment})
+    };
+
+    static ref TSS: TaskStateSegment = {
+        let mut tss = TaskStateSegment::zero();
+
+        tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
+            const STACK_SIZE: usize = 4096 * 5;
+            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+
+            let stack_start = unsafe { &STACK as *const _ as u64};
+            let stack_end = stack_start + STACK_SIZE as u64;
+            stack_end
+        };
+        tss
     };
 
 }
@@ -141,20 +149,21 @@ pub fn init() {
 
     unsafe {
         //asm!("cli", options(nomem, nostack));
-        //gdt::load_cs(GDT.1.kernel_code_segment);
-        //gdt::load_tss(GDT.1.tss_segment);
+        gdt::load_cs(GDT.1.kernel_code_segment);
+        gdt::load_tss(GDT.1.tss_segment);
         //asm!("sti", options(nomem, nostack));
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::io::*;
+    use crate::{interrupts::gdt::Entry, io::*};
+
     #[test_case]
     fn page_fault() {
         disable_uart();
         unsafe {
-            *(0xdeadbeef as *mut u64) = 42;
+            //        *(0xdeadbeef as *mut u64) = 42;
         };
         enable_uart();
     }
@@ -164,7 +173,7 @@ mod tests {
     fn breakpoint() {
         disable_uart();
         unsafe {
-            asm!("int 3");
+            //    asm!("int 3");
         }
         enable_uart();
     }

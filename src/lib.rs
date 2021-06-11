@@ -68,8 +68,3 @@ fn exit_qemu(exit_code: QemuExitCode) {
         port.write(exit_code as u32);
     }
 }
-
-#[test_case]
-fn a() {
-    assert_eq!(true, false);
-}

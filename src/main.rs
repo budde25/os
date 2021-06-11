@@ -31,15 +31,8 @@ pub extern "C" fn kmain() -> ! {
     test_main();
 
     println!("Hello World");
-    let s = "Some test string that fits on a single line";
-    vgaln!("{}", s);
 
     loop {}
-}
-
-#[allow(dead_code)]
-fn divide_by_zero() {
-    unsafe { llvm_asm!("mov dx, 0; div dx" ::: "ax", "dx" : "volatile", "intel") }
 }
 
 #[lang = "eh_personality"]
