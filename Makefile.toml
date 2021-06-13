@@ -38,10 +38,11 @@ condition = { env_true =  ["TEST"] }
 command = "qemu-system-x86_64"
 args = ["@@split(QEMU_ARGS, )", "@@split(QEMU_ARGS_TEST, )", "@@split(QEMU_TARGET, )"]
 
+
 [tasks.check_env_test]
 private = true
-condition = { env_contains = { "CARGO_MAKE_TASK_ARGS" = "deps/" }}
-env = { "TEST" = true }
+condition = { env_contains = { CARGO_MAKE_TASK_ARGS = "deps/" }}
+env = { TEST = true }
 
 [tasks.iso]
 script = [
