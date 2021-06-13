@@ -38,9 +38,9 @@ impl Default for ColorCode {
 }
 
 impl ColorCode {
-    /// Create a color code out of a forground and background color
-    fn new(forground: Color, background: Color) -> Self {
-        Self((background as u8) << 4 | (forground as u8))
+    /// Create a color code out of a foreground and background color
+    fn new(foreground: Color, background: Color) -> Self {
+        Self((background as u8) << 4 | (foreground as u8))
     }
 }
 
@@ -142,7 +142,7 @@ impl Vga {
         self.column_position = 0;
     }
 
-    /// clear a row with empt, uses the set background color
+    /// clear a row with empty char, uses the set background color
     fn clear_row(&mut self, row: usize) {
         let blank_char = Char::new(b' ', self.color_code);
         for col in 0..BUFFER_WIDTH {

@@ -44,8 +44,8 @@ pub fn enable_uart() {
 /// disables the PIC's
 #[allow(dead_code)]
 pub fn disable_pic() {
-    PIC_1.lock().diable();
-    PIC_2.lock().diable();
+    PIC_1.lock().disable();
+    PIC_2.lock().disable();
 }
 
 /// Print that writes to VGA buffer and Uart

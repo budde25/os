@@ -63,7 +63,7 @@ impl Pic {
     }
 
     /// Disable the pic
-    pub fn diable(&mut self) {
+    pub fn disable(&mut self) {
         unsafe {
             self.command.write(0xFF);
         }

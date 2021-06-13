@@ -60,12 +60,12 @@ impl SegmentSelector {
 
     pub fn new(index: u16, level: PrivilegeLevel) -> Self {
         let mut selector = Self::zero();
-        selector.set_priviledge_level(level);
+        selector.set_privilege_level(level);
         selector.set_index(index);
         selector
     }
 
-    pub fn set_priviledge_level(&mut self, level: PrivilegeLevel) {
+    pub fn set_privilege_level(&mut self, level: PrivilegeLevel) {
         self.0.set_bits(0..1, level as u16);
     }
 
@@ -93,7 +93,7 @@ lazy_static! {
         idt.bound_range_exceeded.set_handler(handlers::bound_range_exceeded);
         idt.invalid_opcode.set_handler(handlers::invalid_opcode);
         idt.device_not_available.set_handler(handlers::device_not_available);
-        idt.double_fault.set_handler(handlers::double_fault);
+        idt.double_fault.set_handler(handlers::double_fault).set_stack_index(DOUBLE_FAULT_IST_INDEX);
         idt.invalid_tss.set_handler(handlers::invalid_tss);
         idt.segment_not_present.set_handler(handlers::segment_not_present);
         idt.stack_segment_fault.set_handler(handlers::stack_segment_fault);
@@ -157,23 +157,23 @@ pub fn init() {
 
 #[cfg(test)]
 mod tests {
-    use crate::{interrupts::gdt::Entry, io::*};
+    use crate::io::*;
 
     #[test_case]
     fn page_fault() {
         disable_uart();
         unsafe {
-            //        *(0xdeadbeef as *mut u64) = 42;
+            //*(0xdeadbeef as *mut u64) = 42;
         };
         enable_uart();
     }
 
-    /// Checks that we handle a breakpoint exeception by just returning
+    /// Checks that we handle a breakpoint exception by just returning
     #[test_case]
     fn breakpoint() {
         disable_uart();
         unsafe {
-            //    asm!("int 3");
+            asm!("int 3");
         }
         enable_uart();
     }

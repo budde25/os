@@ -96,7 +96,7 @@ pub struct Entry<T> {
 }
 
 impl<T> Entry<T> {
-    /// Set a presnt entry with handler
+    /// Set a present entry with handler
     fn set_handler_addr(&mut self, handler: u64) {
         self.handler_low = handler as u16;
         self.handler_middle = (handler >> 16) as u16;
@@ -129,8 +129,9 @@ impl<T> Entry<T> {
 macro_rules! impl_set_handler {
     ($h:ty) => {
         impl Entry<$h> {
-            pub fn set_handler(&mut self, handler: $h) {
+            pub fn set_handler(&mut self, handler: $h) -> Options {
                 self.set_handler_addr(handler as u64);
+                self.options
             }
         }
     };
@@ -195,17 +196,17 @@ impl Options {
     }
 
     /// Set the privilege level 0-3
-    pub fn set_priviledge_level(&mut self, dpl: u16) {
+    pub fn set_privilege_level(&mut self, dpl: u16) {
         self.0.set_bits(13..15, dpl);
     }
 
-    pub fn get_priviledge_level(&self) -> u16 {
+    pub fn get_privilege_level(&self) -> u16 {
         self.0.get_bits(13..15)
     }
 
     /// Set stack index level 0 = None, 1-7 valid stacks (IST)
     pub fn set_stack_index(&mut self, index: u16) {
-        self.0.set_bits(0..3, index);
+        self.0.set_bits(0..3, index + 1);
     }
 
     pub fn get_stack_index(&self) -> u16 {
@@ -223,7 +224,7 @@ impl Default for Options {
 impl Debug for Options {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let ist = self.get_stack_index();
-        let privilege_level = self.get_priviledge_level();
+        let privilege_level = self.get_privilege_level();
         let present = self.is_present();
         let interrupts = self.is_interrupts();
         let mut debug = f.debug_struct("Options");

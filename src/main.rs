@@ -19,7 +19,7 @@ global_asm!(include_str!("arch/x86_64/boot_64.s"));
 mod interrupts;
 mod io;
 
-/// Kenel entry point
+/// Kernel entry point
 #[no_mangle]
 pub extern "C" fn kmain() -> ! {
     // Main should initialize all sub-systems and get

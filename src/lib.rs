@@ -15,7 +15,7 @@ pub mod io;
 use core::panic::PanicInfo;
 use io::port::{Port, QemuExitCode};
 
-/// Defines a run funtion
+/// Defines a run function
 pub trait Testable {
     fn run(&self) -> ();
 }
