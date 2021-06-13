@@ -9,6 +9,7 @@ use lazy_static::lazy_static;
 use os::{
     exit_qemu,
     interrupts::{
+        gdt,
         idt::{handlers::ExceptionStackFrame, InterruptDescriptorTable},
         DOUBLE_FAULT_IST_INDEX,
     },
@@ -16,13 +17,13 @@ use os::{
     uart,
 };
 
-static mut I: u64 = 0;
+static mut COUNTER: u64 = 0;
 
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn kmain() -> ! {
     uart!("stack_overflow::stack_overflow...\t");
 
-    os::interrupts::init();
+    init();
 
     // trigger a stack overflow
     stack_overflow();
@@ -38,10 +39,10 @@ fn panic(info: &PanicInfo) -> ! {
 #[allow(unconditional_recursion)]
 fn stack_overflow() {
     unsafe {
-        I += 1;
+        COUNTER += 1;
     }
     // makes a volatile write
-    os::vgaln!("{}", unsafe { I });
+    os::vga!("{}", unsafe { COUNTER });
     stack_overflow(); // for each recursion, the return address is pushed
 }
 
@@ -56,8 +57,15 @@ lazy_static! {
     };
 }
 
-pub fn init_test_idt() {
+pub fn init() {
+    use os::interrupts::GDT;
+    GDT.0.load();
     TEST_IDT.load();
+
+    unsafe {
+        gdt::load_cs(GDT.1.kernel_code_segment);
+        gdt::load_tss(GDT.1.tss_segment);
+    }
 }
 
 extern "x86-interrupt" fn test_double_fault_handler(

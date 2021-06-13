@@ -11,9 +11,9 @@ pub mod tss;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 
-struct Selectors {
-    kernel_code_segment: SegmentSelector,
-    tss_segment: SegmentSelector,
+pub struct Selectors {
+    pub kernel_code_segment: SegmentSelector,
+    pub tss_segment: SegmentSelector,
 }
 
 #[allow(dead_code)]
@@ -67,7 +67,7 @@ impl SegmentSelector {
 }
 
 lazy_static! {
-    static ref IDT: idt::InterruptDescriptorTable = {
+    pub static ref IDT: idt::InterruptDescriptorTable = {
         use idt::handlers::*;
 
         let mut idt = idt::InterruptDescriptorTable::new();
@@ -98,7 +98,7 @@ lazy_static! {
         idt
     };
 
-    static ref GDT: (gdt::GlobalDescriptorTable, Selectors) = {
+    pub static ref GDT: (gdt::GlobalDescriptorTable, Selectors) = {
         use gdt::{Entry, Flags};
 
         let mut gdt = GlobalDescriptorTable::new();
