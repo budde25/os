@@ -1,5 +1,6 @@
 use super::{DescriptorTablePointer, SegmentSelector};
 use bit_field::BitField;
+use bitflags::bitflags;
 use core::{
     fmt::{self, Debug, Formatter},
     marker::PhantomData,
@@ -99,7 +100,7 @@ impl InterruptDescriptorTable {
 pub struct Entry<T> {
     handler_low: u16,          // offset bits 0..15
     selector: SegmentSelector, // a code segment selector in GDT or LDT
-    options: Options,          // type and attributes
+    pub options: Options,      // type and attributes
     handler_middle: u16,       // offset bits 16..31
     handler_high: u32,         // offset bits 32..63
     zero: u32,                 // reserved
@@ -140,9 +141,8 @@ impl<T> Entry<T> {
 macro_rules! impl_set_handler {
     ($h:ty) => {
         impl Entry<$h> {
-            pub fn set_handler(&mut self, handler: $h) -> Options {
+            pub fn set_handler(&mut self, handler: $h) {
                 self.set_handler_addr(handler as u64);
-                self.options
             }
         }
     };
@@ -167,61 +167,41 @@ impl<T> Debug for Entry<T> {
     }
 }
 
-#[derive(Clone, Copy)]
-#[repr(transparent)]
-pub struct Options(u16);
+bitflags! {
+    pub struct Options: u16 {
+        const RESERVED = 0xE00;
+        const PRESENT = 0x8000;
+        const INTERRUPTS = 0x100;
+        const PRIVILEGE_THREE = 0x6000;
+    }
+}
 
-#[allow(dead_code)]
 impl Options {
     /// All bits zero except the ones that must be one
     fn zero() -> Self {
-        let mut options: u16 = 0;
-        options.set_bits(9..12, 0b111); // this bits must be 1
-        Self(options)
+        Self::RESERVED
     }
 
     /// Create new set of options
     pub fn new(present: bool, disable: bool) -> Self {
         let mut options = Self::zero();
-        options.set_present(present);
-        options.disable_interrupts(disable);
+        options.set(Self::PRESENT, present);
+        options.set(Self::INTERRUPTS, !disable);
         options
-    }
-
-    /// Set present
-    pub fn set_present(&mut self, present: bool) {
-        self.0.set_bit(15, present);
-    }
-
-    pub fn is_present(&self) -> bool {
-        self.0.get_bit(15)
-    }
-
-    /// Disable interrupts
-    pub fn disable_interrupts(&mut self, disable: bool) {
-        self.0.set_bit(8, !disable);
-    }
-
-    pub fn is_interrupts(&self) -> bool {
-        self.0.get_bit(8)
-    }
-
-    /// Set the privilege level 0-3
-    pub fn set_privilege_level(&mut self, dpl: u16) {
-        self.0.set_bits(13..15, dpl);
-    }
-
-    pub fn get_privilege_level(&self) -> u16 {
-        self.0.get_bits(13..15)
     }
 
     /// Set stack index level 0 = None, 1-7 valid stacks (IST)
     pub fn set_stack_index(&mut self, index: u16) {
-        self.0.set_bits(0..3, index + 1);
+        // valid range for stack index is 0 - 7
+        assert!(index < 8);
+        self.bits.set_bits(0..3, index + 1);
     }
 
-    pub fn get_stack_index(&self) -> u16 {
-        self.0.get_bits(0..3)
+    pub fn get_stack_index(&self) -> Option<u16> {
+        match self.bits.get_bits(0..3) {
+            0 => None,
+            i => Some(i - 1),
+        }
     }
 }
 
@@ -231,23 +211,6 @@ impl Default for Options {
         Self::new(true, true)
     }
 }
-
-impl Debug for Options {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let ist = self.get_stack_index();
-        let privilege_level = self.get_privilege_level();
-        let present = self.is_present();
-        let interrupts = self.is_interrupts();
-        let mut debug = f.debug_struct("Options");
-
-        debug.field("ist", &ist);
-        debug.field("privilege_level", &privilege_level);
-        debug.field("present", &present);
-        debug.field("interrupts", &interrupts);
-        debug.finish()
-    }
-}
-
 pub mod handlers {
     use crate::println;
 

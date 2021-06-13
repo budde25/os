@@ -5,9 +5,9 @@ use gdt::GlobalDescriptorTable;
 
 use tss::TaskStateSegment;
 
-mod gdt;
-mod idt;
-mod tss;
+pub mod gdt;
+pub mod idt;
+pub mod tss;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 
@@ -79,7 +79,11 @@ lazy_static! {
         idt.bound_range_exceeded.set_handler(bound_range_exceeded);
         idt.invalid_opcode.set_handler(invalid_opcode);
         idt.device_not_available.set_handler(device_not_available);
-        idt.double_fault.set_handler(double_fault).set_stack_index(DOUBLE_FAULT_IST_INDEX);
+
+        // double fault handler
+        idt.double_fault.set_handler(double_fault);
+        idt.double_fault.options.set_stack_index(DOUBLE_FAULT_IST_INDEX);
+
         idt.invalid_tss.set_handler(invalid_tss);
         idt.segment_not_present.set_handler(segment_not_present);
         idt.stack_segment_fault.set_handler(stack_segment_fault);

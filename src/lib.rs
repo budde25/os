@@ -62,7 +62,7 @@ fn panic(info: &PanicInfo) -> ! {
     test_panic_handler(info)
 }
 
-fn exit_qemu(exit_code: QemuExitCode) {
+pub fn exit_qemu(exit_code: QemuExitCode) {
     unsafe {
         let port = Port::new(0xf4);
         port.write(exit_code as u32);
