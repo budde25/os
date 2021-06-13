@@ -2,7 +2,6 @@ use bit_field::BitField;
 use lazy_static::lazy_static;
 
 use gdt::GlobalDescriptorTable;
-use handlers::ExceptionStackFrame;
 
 use tss::TaskStateSegment;
 
@@ -11,20 +10,7 @@ mod handlers;
 mod idt;
 mod tss;
 
-pub trait Handler {}
-
-pub type HandlerFunc = extern "x86-interrupt" fn(_: ExceptionStackFrame);
-pub type HandlerFuncErrorCode = extern "x86-interrupt" fn(_: ExceptionStackFrame, _: u64);
-pub type DivergingHandlerFuncErrorCode =
-    extern "x86-interrupt" fn(_: ExceptionStackFrame, _: u64) -> !;
-pub type DivergingHandlerFunc = extern "x86-interrupt" fn(_: ExceptionStackFrame) -> !;
-
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
-
-impl Handler for HandlerFunc {}
-impl Handler for HandlerFuncErrorCode {}
-impl Handler for DivergingHandlerFunc {}
-impl Handler for DivergingHandlerFuncErrorCode {}
 
 struct Selectors {
     kernel_code_segment: SegmentSelector,
@@ -48,11 +34,10 @@ pub struct DescriptorTablePointer {
     base: u64,  // Base addr
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[repr(transparent)]
 pub struct SegmentSelector(u16);
 
-#[allow(dead_code)]
 impl SegmentSelector {
     fn zero() -> Self {
         Self(0)
@@ -84,27 +69,29 @@ impl SegmentSelector {
 
 lazy_static! {
     static ref IDT: idt::InterruptDescriptorTable = {
+        use idt::handlers::*;
+
         let mut idt = idt::InterruptDescriptorTable::new();
-        idt.divide_by_zero.set_handler(handlers::divide_by_zero);
-        idt.debug.set_handler(handlers::debug);
-        idt.non_maskable_interrupt.set_handler(handlers::non_maskable_interrupt);
-        idt.breakpoint.set_handler(handlers::breakpoint);
-        idt.overflow.set_handler(handlers::overflow);
-        idt.bound_range_exceeded.set_handler(handlers::bound_range_exceeded);
-        idt.invalid_opcode.set_handler(handlers::invalid_opcode);
-        idt.device_not_available.set_handler(handlers::device_not_available);
-        idt.double_fault.set_handler(handlers::double_fault).set_stack_index(DOUBLE_FAULT_IST_INDEX);
-        idt.invalid_tss.set_handler(handlers::invalid_tss);
-        idt.segment_not_present.set_handler(handlers::segment_not_present);
-        idt.stack_segment_fault.set_handler(handlers::stack_segment_fault);
-        idt.general_protection_fault.set_handler(handlers::general_protection_fault);
-        idt.page_fault.set_handler(handlers::page_fault);
-        idt.x87_floating_point.set_handler(handlers::x87_floating_point);
-        idt.alignment_check.set_handler(handlers::alignment_check);
-        idt.machine_check.set_handler(handlers::machine_check);
-        idt.simd_floating_point.set_handler(handlers::simd_floating_point);
-        idt.virtualization.set_handler(handlers::virtualization);
-        idt.security_exception.set_handler(handlers::security_exception);
+        idt.divide_by_zero.set_handler(divide_by_zero);
+        idt.debug.set_handler(debug);
+        idt.non_maskable_interrupt.set_handler(non_maskable_interrupt);
+        idt.breakpoint.set_handler(breakpoint);
+        idt.overflow.set_handler(overflow);
+        idt.bound_range_exceeded.set_handler(bound_range_exceeded);
+        idt.invalid_opcode.set_handler(invalid_opcode);
+        idt.device_not_available.set_handler(device_not_available);
+        idt.double_fault.set_handler(double_fault).set_stack_index(DOUBLE_FAULT_IST_INDEX);
+        idt.invalid_tss.set_handler(invalid_tss);
+        idt.segment_not_present.set_handler(segment_not_present);
+        idt.stack_segment_fault.set_handler(stack_segment_fault);
+        idt.general_protection_fault.set_handler(general_protection_fault);
+        idt.page_fault.set_handler(page_fault);
+        idt.x87_floating_point.set_handler(x87_floating_point);
+        idt.alignment_check.set_handler(alignment_check);
+        idt.machine_check.set_handler(machine_check);
+        idt.simd_floating_point.set_handler(simd_floating_point);
+        idt.virtualization.set_handler(virtualization);
+        idt.security_exception.set_handler(security_exception);
         idt
     };
 
