@@ -6,7 +6,6 @@ use gdt::GlobalDescriptorTable;
 use tss::TaskStateSegment;
 
 mod gdt;
-mod handlers;
 mod idt;
 mod tss;
 
