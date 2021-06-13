@@ -3,20 +3,24 @@ authors = ["budde25 <ethan@ebudd.io>"]
 edition = "2018"
 name = "os"
 version = "0.1.0"
-
 [dependencies]
-spin = "*"
 bit_field = "*"
 bitflags = "*"
+spin = "*"
 
 [dependencies.lazy_static]
 features = ["spin_no_std"]
 version = "1.0"
 
+[profile]
 [profile.dev]
 lto = false
 
 [profile.release]
-opt-level = 3
-lto = true
 codegen-units = 1
+lto = true
+opt-level = 3
+
+[[test]]
+harness = false
+name = "stack_overflow"
