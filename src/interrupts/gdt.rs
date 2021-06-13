@@ -156,8 +156,8 @@ bitflags! {
         const SAVL      = 0x1000; // Available for system use
         const LONG      = 0x2000; // Long mode
         const SIZE      = 0x4000; // Size (0 for 16-bit, 1 for 32)
-        const GRANULATRITY = 0x8000; // Granularity (0 for 1B - 1MB, 1 for 4KB - 4GB)
-        const PRIVLEDGE_THREE = 0x60; // Privilege level 3
+        const GRANULARITY = 0x8000; // Granularity (0 for 1B - 1MB, 1 for 4KB - 4GB)
+        const PRIVILEGE_THREE = 0x60; // Privilege level 3
         const LIMIT_TWO   = 0xF00;
     }
 }
@@ -169,7 +169,7 @@ impl Flags {
             | Self::WRITABLE.bits
             | Self::DESCTYPE.bits
             | Self::PRESENT.bits
-            | Self::GRANULATRITY.bits
+            | Self::GRANULARITY.bits
             | Self::LIMIT_TWO.bits,
     );
 
@@ -179,10 +179,10 @@ impl Flags {
     pub const DATA_PL_ZERO: Self = Self::from_bits_truncate(Self::COMMON.bits | Self::SIZE.bits);
 
     pub const CODE_PL_THREE: Self =
-        Self::from_bits_truncate(Self::CODE_PL_ZERO.bits | Self::PRIVLEDGE_THREE.bits);
+        Self::from_bits_truncate(Self::CODE_PL_ZERO.bits | Self::PRIVILEGE_THREE.bits);
 
     pub const DATA_PL_THREE: Self =
-        Self::from_bits_truncate(Self::DATA_PL_ZERO.bits | Self::PRIVLEDGE_THREE.bits);
+        Self::from_bits_truncate(Self::DATA_PL_ZERO.bits | Self::PRIVILEGE_THREE.bits);
 
     pub const TSS: Self = Self::from_bits_truncate(
         Self::EXECUTABLE.bits | Self::ACCESSED.bits | Self::PRESENT.bits | Self::SIZE.bits,
