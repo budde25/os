@@ -11,6 +11,7 @@ global_asm!(include_str!("arch/x86_64/boot_64.s"));
 // pub so we can use them in integration tests
 pub mod interrupts;
 pub mod io;
+pub mod address;
 
 use core::panic::PanicInfo;
 use io::port::{Port, QemuExitCode};

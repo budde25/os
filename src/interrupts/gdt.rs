@@ -224,7 +224,7 @@ mod tests {
         assert_eq!(size_of::<GlobalDescriptorTable>(), 8 * 7);
     }
 
-    /// Linux deafaults
+    /// Linux defaults
     #[test_case]
     #[rustfmt::skip]
     fn linux_defaults() {

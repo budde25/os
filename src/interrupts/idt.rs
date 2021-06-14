@@ -213,15 +213,46 @@ impl Default for Options {
 }
 pub mod handlers {
     use crate::println;
+    use crate::address::virt::VirtualAddress;
+    use bitflags::bitflags;
+
 
     #[derive(Debug, Clone, Copy)]
     #[repr(C)]
     pub struct ExceptionStackFrame {
-        instruction_pointer: u64,
+        instruction_pointer: VirtualAddress,
         code_segment: u64,
-        cpu_flags: u64,
-        stack_pointer: u64,
+        cpu_flags: RFlags,
+        stack_pointer: VirtualAddress,
         stack_segment: u64,
+    }
+
+    bitflags! {
+        #[repr(C)]
+        pub struct RFlags: u64 {
+           const CARRY = 0x1;
+           const RESERVED_1 = 0x2;
+           const PARITY = 0x4;
+           const RESERVED_2 = 0x8;
+           const AUX_CARRY = 0x10;
+           const RESERVED_3 = 0x20;
+           const ZERO = 0x40;
+           const SIGN = 0x80;
+           const TRAP = 0x100;
+           const INTERRUPT_ENABLE = 0x200;
+           const DIRECTION = 0x400;
+           const OVERFLOW = 0x800;
+           const IO_PRIVILEGE_THREE = 0x3000;
+           const NESTED_TASK = 0x4000;
+           const RESERVED_4 = 0x8000;
+           const RESUME = 0x10000;
+           const VIRTUAL = 0x20000;
+           const ALIGNMENT_ACCESS = 0x40000;
+           const VIRTUAL_INTERRUPT = 0x80000;
+           const VIRTUAL_INTERRUPT_PENDING = 0x100000;
+           const ID = 0x200000;
+           const RESERVED_5 = 0xFFFFFFFFFFC00000;
+        }
     }
 
     /// 1
@@ -275,7 +306,7 @@ pub mod handlers {
     /// 10
     pub extern "x86-interrupt" fn invalid_tss(stack_frame: ExceptionStackFrame, error_code: u64) {
         println!(
-            "EXCEPTION: INVALID_TSS\n{:#?}\nError Code:{}",
+            "EXCEPTION: INVALID_TSS\n{:#?}\nError Code: {}",
             stack_frame, error_code
         );
     }
@@ -286,7 +317,7 @@ pub mod handlers {
         error_code: u64,
     ) {
         println!(
-            "EXCEPTION: SEGMENT_NOT_PRESENT\n{:#?}\nError Code:{}",
+            "EXCEPTION: SEGMENT_NOT_PRESENT\n{:#?}\nError Code: {}",
             stack_frame, error_code
         );
     }
@@ -297,7 +328,7 @@ pub mod handlers {
         error_code: u64,
     ) {
         println!(
-            "EXCEPTION: STACK SEGMENT FAULT\n{:#?}\nError Code:{}",
+            "EXCEPTION: STACK SEGMENT FAULT\n{:#?}\nError Code: {}",
             stack_frame, error_code
         );
     }
@@ -308,7 +339,7 @@ pub mod handlers {
         error_code: u64,
     ) {
         println!(
-            "EXCEPTION: GENERAL PROTECTION FAULT\n{:#?}\nError Code:{}",
+            "EXCEPTION: GENERAL PROTECTION FAULT\n{:#?}\nError Code: {}",
             stack_frame, error_code
         );
     }
@@ -316,7 +347,7 @@ pub mod handlers {
     /// 14
     pub extern "x86-interrupt" fn page_fault(stack_frame: ExceptionStackFrame, error_code: u64) {
         println!(
-            "EXCEPTION: PAGE FAULT\n{:#?}\nError Code:{}",
+            "EXCEPTION: PAGE FAULT\n{:#?}\nError Code: {}",
             stack_frame, error_code
         );
     }
@@ -332,7 +363,7 @@ pub mod handlers {
         error_code: u64,
     ) {
         println!(
-            "EXCEPTION: x87 FLOATING POINT\n{:#?}\nError Code:{}",
+            "EXCEPTION: x87 FLOATING POINT\n{:#?}\nError Code: {}",
             stack_frame, error_code
         );
     }
@@ -358,7 +389,7 @@ pub mod handlers {
         error_code: u64,
     ) {
         println!(
-            "EXCEPTION: VIRTUALIZATION\n{:#?}\nError Code:{}",
+            "EXCEPTION: VIRTUALIZATION\n{:#?}\nError Code: {}",
             stack_frame, error_code
         );
     }
