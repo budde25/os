@@ -24,6 +24,10 @@ impl<T: PortIO> Port<T> {
         }
     }
 
+    pub fn get_port(&self) -> u16 {
+        self.port
+    }
+
     pub unsafe fn write(&self, value: T) {
         T::write(self.port, value);
     }

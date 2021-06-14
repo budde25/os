@@ -133,15 +133,21 @@ lazy_static! {
 
 }
 
+pub unsafe fn disable_interrupts() {
+    asm!("cli", options(nomem, nostack));
+}
+
+pub unsafe fn enable_interrupts() {
+    asm!("sti", options(nomem, nostack));
+}
+
 pub fn init() {
     GDT.0.load();
     IDT.load();
 
     unsafe {
-        //asm!("cli", options(nomem, nostack));
         gdt::load_cs(GDT.1.kernel_code_segment);
         gdt::load_tss(GDT.1.tss_segment);
-        //asm!("sti", options(nomem, nostack));
     }
 }
 
@@ -151,20 +157,20 @@ mod tests {
 
     #[test_case]
     fn page_fault() {
-        disable_uart();
+        uart_disable();
         unsafe {
             //*(0xdeadbeef as *mut u64) = 42;
         };
-        enable_uart();
+        uart_enable();
     }
 
     /// Checks that we handle a breakpoint exception by just returning
     #[test_case]
     fn breakpoint() {
-        disable_uart();
+        uart_disable();
         unsafe {
             asm!("int 3");
         }
-        enable_uart();
+        uart_enable();
     }
 }

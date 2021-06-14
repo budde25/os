@@ -31,19 +31,27 @@ lazy_static! {
     };
 }
 
-#[allow(dead_code)]
-pub fn disable_uart() {
+pub fn pic_init() {
+    pic_remap();
+    pic_disable();
+}
+
+pub fn uart_disable() {
     UART.lock().disable();
 }
 
-#[allow(dead_code)]
-pub fn enable_uart() {
+pub fn uart_enable() {
     UART.lock().enable();
 }
 
+fn pic_remap() {
+    let offset = 32;
+    PIC_1.lock().remap(offset);
+    PIC_2.lock().remap(offset);
+}
+
 /// disables the PIC's
-#[allow(dead_code)]
-pub fn disable_pic() {
+fn pic_disable() {
     PIC_1.lock().disable();
     PIC_2.lock().disable();
 }

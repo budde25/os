@@ -31,11 +31,24 @@ bitflags! {
     }
 }
 
-/// Master (IRQ 0-7)
-const PIC_1: u16 = 0x20;
+#[repr(u16)]
+enum PicType {
+    /// Master (IRQ 0-7)
+    Pic1 = 0x20,
 
-/// Salve (IRQ 8 -15)
-const PIC_2: u16 = 0xA0;
+    /// Salve (IRQ 8 -15)
+    Pic2 = 0xA0,
+}
+
+impl From<u16> for PicType {
+    fn from(num: u16) -> Self {
+        match num {
+            0x20 => Self::Pic1,
+            0xA0 => Self::Pic2,
+            _ => panic!("Not a PIC"),
+        }
+    }
+}
 
 /// Programmable Interrupt Controller
 pub struct Pic {
@@ -54,12 +67,12 @@ impl Pic {
 
     /// Master (IRQ 0-7)
     pub fn pic_1() -> Self {
-        Self::new(PIC_1)
+        Self::new(PicType::Pic1 as u16)
     }
 
     /// Salve (IRQ 8 -15)
     pub fn pic_2() -> Self {
-        Self::new(PIC_2)
+        Self::new(PicType::Pic2 as u16)
     }
 
     /// Disable the pic
@@ -69,17 +82,31 @@ impl Pic {
         }
     }
 
+    fn pic_type(&self) -> PicType {
+        self.command.get_port().into()
+    }
+
     /// Remap the pic
-    pub fn remap(&mut self, offset: u8, master: bool) {
+    pub fn remap(&mut self, offset: u8) {
         unsafe {
-            // save mask
-            let _mask: u8 = self.data.read();
+            // save masks
+            let mask: u8 = self.data.read();
+
             self.command.write(ICW1::INIT.bits() | ICW1::ICW4.bits());
+
+            // Vector offset
             self.data.write(offset);
-            match master {
-                true => self.data.write(4),
-                false => self.data.write(2),
+            match self.pic_type() {
+                // Tell Master PIC that there is a slave PIC at IRQ2 (0000 0100)
+                PicType::Pic1 => self.data.write(4),
+                // tell Slave PIC its cascade identity (0000 0010)
+                PicType::Pic2 => self.data.write(2),
             }
+
+            self.data.write(ICW4::M8086.bits());
+
+            // Restore mask
+            self.data.write(mask);
         }
     }
 }

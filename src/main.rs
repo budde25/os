@@ -16,6 +16,7 @@
 global_asm!(include_str!("arch/x86_64/boot_32.s"));
 global_asm!(include_str!("arch/x86_64/boot_64.s"));
 
+mod address;
 mod interrupts;
 mod io;
 
@@ -26,6 +27,12 @@ pub extern "C" fn kmain() -> ! {
     // ready to start scheduling. The last thing this
     // should do is start the timer.
     interrupts::init();
+    // Remap and disable the pic
+    io::pic_init();
+
+    unsafe {
+        // interrupts::enable_interrupts();
+    }
 
     #[cfg(test)]
     test_main();
