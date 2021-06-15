@@ -1,6 +1,7 @@
 use super::{DescriptorTablePointer, SegmentSelector};
 use bit_field::BitField;
 use bitflags::bitflags;
+use core::convert::Into;
 use core::{
     fmt::{self, Debug, Formatter},
     marker::PhantomData,
@@ -49,7 +50,7 @@ pub struct InterruptDescriptorTable {
     reserved_2: [Entry<HandlerFunc>; 9],
     pub security_exception: Entry<HandlerFuncErrorCode>,
     reserved_3: Entry<HandlerFunc>,
-    interrupts: [Entry<HandlerFunc>; 256 - 32],
+    pub interrupts: [Entry<HandlerFunc>; 256 - 32],
 }
 
 impl InterruptDescriptorTable {
@@ -211,6 +212,25 @@ impl Default for Options {
         Self::new(true, true)
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum InterruptIndex {
+    Timer = crate::io::pic::PIC_1_OFFSET,
+}
+
+impl Into<u8> for InterruptIndex {
+    fn into(self) -> u8 {
+        self as u8
+    }
+}
+
+impl Into<usize> for InterruptIndex {
+    fn into(self) -> usize {
+        self as usize
+    }
+}
+
 pub mod handlers {
     use crate::address::virt::VirtualAddress;
     use crate::interrupts::SegmentSelector;
@@ -226,7 +246,7 @@ pub mod handlers {
         _reserved_1: [u8; 6],
         cpu_flags: RFlags,
         stack_pointer: VirtualAddress,
-        stack_segment: u64,
+        stack_segment: SegmentSelector,
         _reserved_2: [u8; 6],
     }
 
@@ -413,6 +433,11 @@ pub mod handlers {
             "EXCEPTION: VIRTUALIZATION\n{:#?}\nError Code: {}",
             stack_frame, error_code
         );
+    }
+
+    /// Timer Interrupt
+    pub extern "x86-interrupt" fn timer(_stack_frame: ExceptionStackFrame) {
+        crate::print!(".");
     }
 }
 

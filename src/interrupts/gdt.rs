@@ -1,3 +1,4 @@
+use crate::address::virt::VirtualAddress;
 use crate::interrupts::tss::TaskStateSegment;
 use crate::interrupts::DescriptorTablePointer;
 
@@ -8,11 +9,11 @@ use core::fmt::{self, Debug, Formatter};
 
 #[derive(Debug, Clone, Copy, Hash)]
 #[repr(C, packed)]
-pub struct GlobalDescriptorTable([Entry; 7]);
+pub struct GlobalDescriptorTable([Entry; 8]);
 
 impl GlobalDescriptorTable {
     pub fn new() -> Self {
-        Self([Entry::empty(); 7])
+        Self([Entry::zero(); 8])
     }
 
     pub fn set_entry(&mut self, index: u8, entry: Entry) -> SegmentSelector {
@@ -67,6 +68,16 @@ pub struct Entry {
 }
 
 impl Entry {
+    fn zero() -> Self {
+        Self {
+            limit_1: 0,
+            base_1: 0,
+            base_2: 0,
+            base_3: 0,
+            flags: Flags::empty(),
+        }
+    }
+
     fn empty() -> Self {
         Self::new(0, Flags::empty())
     }
@@ -111,17 +122,29 @@ impl Entry {
         };
         (low, high)
     }
+
+    pub fn get_limit(&self) -> VirtualAddress {
+        let flags = self.flags;
+
+        let mut limit: u32 = self.limit_1 as u32;
+        limit |= (flags.get_limit_2() as u32) << 16;
+        VirtualAddress::new(limit as u64)
+    }
+
+    pub fn get_base(&self) -> VirtualAddress {
+        let mut base: u32 = self.base_1 as u32;
+        base |= (self.base_2 as u32) << 16;
+        base |= (self.base_3 as u32) << 24;
+        VirtualAddress::new(base as u64)
+    }
 }
 
 impl Debug for Entry {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let mut limit: u32 = self.limit_1 as u32;
         let flags = self.flags;
-        limit = limit | ((flags.get_limit_2() as u32) << 16);
-        let mut base: u32 = self.base_1 as u32;
-        base = base | ((self.base_2 as u32) << 16);
-        base = base | ((self.base_3 as u32) << 24);
-        let flags = self.flags;
+        let base = self.get_base();
+        let limit = self.get_limit();
+
         let mut debug = f.debug_struct("Entry");
         debug.field("base", &base);
         debug.field("limit", &limit);
@@ -221,7 +244,7 @@ mod tests {
     /// Make sure the gdt struct is getting correctly packed
     #[test_case]
     fn gdt_struct_size() {
-        assert_eq!(size_of::<GlobalDescriptorTable>(), 8 * 7);
+        assert_eq!(size_of::<GlobalDescriptorTable>(), 8 * 8);
     }
 
     /// Linux defaults

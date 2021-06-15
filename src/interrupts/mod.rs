@@ -1,5 +1,5 @@
 use bit_field::BitField;
-use core::fmt;
+use core::{fmt, usize};
 use lazy_static::lazy_static;
 
 use gdt::GlobalDescriptorTable;
@@ -87,6 +87,7 @@ impl fmt::Debug for SegmentSelector {
 lazy_static! {
     pub static ref IDT: idt::InterruptDescriptorTable = {
         use idt::handlers::*;
+        use idt::InterruptIndex;
 
         let mut idt = idt::InterruptDescriptorTable::new();
         idt.divide_by_zero.set_handler(divide_by_zero);
@@ -113,6 +114,10 @@ lazy_static! {
         idt.simd_floating_point.set_handler(simd_floating_point);
         idt.virtualization.set_handler(virtualization);
         idt.security_exception.set_handler(security_exception);
+
+        // interrupt handlers
+        idt.interrupts[InterruptIndex::Timer as usize].set_handler(timer);
+
         idt
     };
 
