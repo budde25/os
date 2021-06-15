@@ -1,4 +1,5 @@
 use bit_field::BitField;
+use core::fmt;
 use lazy_static::lazy_static;
 
 use gdt::GlobalDescriptorTable;
@@ -16,14 +17,25 @@ pub struct Selectors {
     pub tss_segment: SegmentSelector,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
 pub enum PrivilegeLevel {
     Ring0 = 0,
     Ring1 = 1,
     Ring2 = 2,
     Ring3 = 3,
+}
+
+impl From<u16> for PrivilegeLevel {
+    fn from(num: u16) -> Self {
+        match num {
+            0 => PrivilegeLevel::Ring0,
+            1 => PrivilegeLevel::Ring1,
+            2 => PrivilegeLevel::Ring2,
+            3 => PrivilegeLevel::Ring3,
+            i => panic!("{} is not a valid privilege level", i),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -33,28 +45,25 @@ pub struct DescriptorTablePointer {
     base: u64,  // Base addr
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Clone, Copy, Default)]
 #[repr(transparent)]
 pub struct SegmentSelector(u16);
 
 impl SegmentSelector {
-    fn zero() -> Self {
-        Self(0)
-    }
-
     pub fn new(index: u16, level: PrivilegeLevel) -> Self {
-        let mut selector = Self::zero();
-        selector.set_privilege_level(level);
-        selector.set_index(index);
-        selector
+        SegmentSelector(index << 3 | (level as u16))
     }
 
     pub fn set_privilege_level(&mut self, level: PrivilegeLevel) {
-        self.0.set_bits(0..1, level as u16);
+        self.0.set_bits(0..2, level as u16);
     }
 
-    fn set_index(&mut self, index: u16) {
-        self.0.set_bits(3..15, index);
+    pub fn get_privilege_level(&self) -> PrivilegeLevel {
+        self.0.get_bits(0..2).into()
+    }
+
+    pub fn get_index(&self) -> u16 {
+        self.0 >> 3
     }
 
     fn code_segment() -> Self {
@@ -63,6 +72,15 @@ impl SegmentSelector {
             asm!("mov {0:x}, cs", out(reg) segment, options(nostack, nomem, preserves_flags));
         };
         Self(segment)
+    }
+}
+
+impl fmt::Debug for SegmentSelector {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut s = f.debug_struct("Segment Selector");
+        s.field("privilege level", &self.get_privilege_level());
+        s.field("index", &self.get_index());
+        s.finish()
     }
 }
 

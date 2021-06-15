@@ -120,7 +120,7 @@ impl<T> Entry<T> {
     /// Create a non present entry
     fn empty() -> Self {
         Self {
-            selector: SegmentSelector::zero(),
+            selector: SegmentSelector::default(),
             handler_low: 0,
             handler_middle: 0,
             handler_high: 0,
@@ -212,19 +212,40 @@ impl Default for Options {
     }
 }
 pub mod handlers {
-    use crate::println;
     use crate::address::virt::VirtualAddress;
+    use crate::interrupts::SegmentSelector;
+    use crate::println;
     use bitflags::bitflags;
+    use core::fmt;
 
-
-    #[derive(Debug, Clone, Copy)]
-    #[repr(C)]
+    #[derive(Clone, Copy)]
+    #[repr(C, packed)]
     pub struct ExceptionStackFrame {
-        instruction_pointer: VirtualAddress,
-        code_segment: u64,
+        pub instruction_pointer: VirtualAddress,
+        pub code_segment: SegmentSelector,
+        _reserved_1: [u8; 6],
         cpu_flags: RFlags,
         stack_pointer: VirtualAddress,
         stack_segment: u64,
+        _reserved_2: [u8; 6],
+    }
+
+    impl fmt::Debug for ExceptionStackFrame {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let instruction_pointer = self.instruction_pointer;
+            let code_segment = self.code_segment;
+            let cpu_flags = self.cpu_flags;
+            let stack_pointer = self.stack_pointer;
+            let stack_segment = self.stack_segment;
+
+            let mut s = f.debug_struct("ExceptionStackFrame");
+            s.field("instruction_pointer", &instruction_pointer);
+            s.field("code_segment", &code_segment);
+            s.field("cpu_flags", &cpu_flags);
+            s.field("stack_pointer", &stack_pointer);
+            s.field("stack_segment", &stack_segment);
+            s.finish()
+        }
     }
 
     bitflags! {
