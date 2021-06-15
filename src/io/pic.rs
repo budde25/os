@@ -1,6 +1,8 @@
 use super::port::Port;
 use bitflags::bitflags;
 
+pub const PIC_1_OFFSET: u8 = 32;
+
 bitflags! {
     pub struct ICW1: u8 {
         /// ICW4 (not) needed
@@ -31,6 +33,7 @@ bitflags! {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u16)]
 enum PicType {
     /// Master (IRQ 0-7)
@@ -87,20 +90,27 @@ impl Pic {
     }
 
     /// Remap the pic
-    pub fn remap(&mut self, offset: u8) {
+    pub fn remap(&mut self) {
         unsafe {
             // save masks
             let mask: u8 = self.data.read();
 
             self.command.write(ICW1::INIT.bits() | ICW1::ICW4.bits());
 
-            // Vector offset
-            self.data.write(offset);
             match self.pic_type() {
-                // Tell Master PIC that there is a slave PIC at IRQ2 (0000 0100)
-                PicType::Pic1 => self.data.write(4),
-                // tell Slave PIC its cascade identity (0000 0010)
-                PicType::Pic2 => self.data.write(2),
+                PicType::Pic1 => {
+                    // Vector offset
+                    self.data.write(PIC_1_OFFSET);
+                    // Tell Master PIC that there is a slave PIC at IRQ2 (0000 0100)
+                    self.data.write(4)
+                }
+                PicType::Pic2 => {
+                    // Vector offset
+                    self.data.write(PIC_1_OFFSET + 8);
+
+                    // tell Slave PIC its cascade identity (0000 0010)
+                    self.data.write(2)
+                }
             }
 
             self.data.write(ICW4::M8086.bits());
@@ -108,5 +118,19 @@ impl Pic {
             // Restore mask
             self.data.write(mask);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test_case]
+    fn pic_versions() {
+        let pic1 = Pic::pic_1();
+        let pic2 = Pic::pic_2();
+
+        assert_eq!(pic1.pic_type(), PicType::Pic1);
+        assert_eq!(pic2.pic_type(), PicType::Pic2);
     }
 }

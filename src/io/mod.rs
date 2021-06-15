@@ -33,7 +33,7 @@ lazy_static! {
 
 pub fn pic_init() {
     pic_remap();
-    pic_disable();
+    //pic_disable();
 }
 
 pub fn uart_disable() {
@@ -45,9 +45,8 @@ pub fn uart_enable() {
 }
 
 fn pic_remap() {
-    let offset = 32;
-    PIC_1.lock().remap(offset);
-    PIC_2.lock().remap(offset);
+    PIC_1.lock().remap();
+    PIC_2.lock().remap();
 }
 
 /// disables the PIC's

@@ -14,8 +14,8 @@ pub struct VirtualAddress(u64);
 pub struct VirtualAddressInvalid(u64);
 
 impl VirtualAddress {
-    pub fn new(address: u64) {
-        Self::try_new(address).expect("Invalid Virtual Address");
+    pub fn new(address: u64) -> Self {
+        Self::try_new(address).expect("Invalid Virtual Address")
     }
 
     pub fn try_new(address: u64) -> Result<Self, VirtualAddressInvalid> {
