@@ -30,6 +30,8 @@ pub extern "C" fn kmain() -> ! {
     // Remap and disable the pic
     io::pic_init();
 
+    println!("Before Interrupt");
+
     unsafe {
         interrupts::enable_interrupts();
     }

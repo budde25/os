@@ -8,6 +8,7 @@ use tss::TaskStateSegment;
 
 pub mod gdt;
 pub mod idt;
+pub mod rflags;
 pub mod tss;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
@@ -164,6 +165,8 @@ pub unsafe fn enable_interrupts() {
     asm!("sti", options(nomem, nostack));
 }
 
+pub fn interrupts_enabled() {}
+
 pub fn init() {
     GDT.0.load();
     IDT.load();
@@ -172,6 +175,26 @@ pub fn init() {
         gdt::load_cs(GDT.1.kernel_code_segment);
         gdt::load_tss(GDT.1.tss_segment);
     }
+}
+
+pub fn without_interrupts<F, R>(f: F) -> R
+where
+    F: FnOnce() -> R,
+{
+    use rflags::RFlags;
+
+    let int_enabled = RFlags::read().contains(RFlags::INTERRUPT_ENABLE);
+    if int_enabled {
+        unsafe { disable_interrupts() };
+    }
+
+    let ret = f();
+
+    if int_enabled {
+        unsafe { enable_interrupts() };
+    }
+
+    ret
 }
 
 #[cfg(test)]

@@ -111,10 +111,18 @@ pub fn _print(args: Arguments) {
 
 #[doc(hidden)]
 pub fn _print_vga(args: Arguments) {
-    VGA.lock().write_fmt(args).unwrap();
+    use crate::interrupts::without_interrupts;
+
+    without_interrupts(|| {
+        VGA.lock().write_fmt(args).unwrap();
+    })
 }
 
 #[doc(hidden)]
 pub fn _print_uart(args: Arguments) {
-    UART.lock().write_fmt(args).unwrap();
+    use crate::interrupts::without_interrupts;
+
+    without_interrupts(|| {
+        UART.lock().write_fmt(args).unwrap();
+    })
 }
