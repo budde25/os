@@ -16,6 +16,5 @@
     "ld.lld": [
       "--script=src/arch/x86_64/linker.ld"
     ]
-  },
-  "relocation_model": "static"
+  }
 }

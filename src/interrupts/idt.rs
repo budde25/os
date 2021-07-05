@@ -216,7 +216,7 @@ impl Default for Options {
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum InterruptIndex {
-    Timer = crate::io::pic::PIC_1_OFFSET,
+    Timer = 0,
 }
 
 impl Into<u8> for InterruptIndex {
@@ -232,6 +232,7 @@ impl Into<usize> for InterruptIndex {
 }
 
 pub mod handlers {
+    use super::InterruptIndex;
     use crate::address::virt::VirtualAddress;
     use crate::interrupts::SegmentSelector;
     use crate::println;
@@ -438,6 +439,7 @@ pub mod handlers {
     /// Timer Interrupt
     pub extern "x86-interrupt" fn timer(_stack_frame: ExceptionStackFrame) {
         crate::print!(".");
+        crate::io::pic_eoi(InterruptIndex::Timer.into());
     }
 }
 

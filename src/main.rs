@@ -31,7 +31,7 @@ pub extern "C" fn kmain() -> ! {
     io::pic_init();
 
     unsafe {
-        // interrupts::enable_interrupts();
+        interrupts::enable_interrupts();
     }
 
     #[cfg(test)]
@@ -111,6 +111,7 @@ where
     }
 }
 
+#[cfg(test)]
 mod tests {
     #[test_case]
     fn trivial_assertion() {

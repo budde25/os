@@ -36,6 +36,15 @@ pub fn pic_init() {
     //pic_disable();
 }
 
+pub fn pic_eoi(index: usize) {
+    // we always send it to the master but the slave too if it came from there
+    if index >= 8 {
+        PIC_2.lock().end_of_interrupt();
+    }
+
+    PIC_1.lock().end_of_interrupt();
+}
+
 pub fn uart_disable() {
     UART.lock().disable();
 }
