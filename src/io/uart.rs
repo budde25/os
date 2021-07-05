@@ -26,6 +26,9 @@ pub struct Uart {
     modem_sts: Register,
     /// Scratch Register
     scratch: Register,
+
+    // the current column
+    column: usize,
 }
 
 impl Uart {
@@ -39,6 +42,7 @@ impl Uart {
             line_sts: Port::new(com + 5),
             modem_sts: Port::new(com + 6),
             scratch: Port::new(com + 7),
+            column: 0,
         }
     }
 
@@ -76,12 +80,22 @@ impl Uart {
     }
 
     fn write_byte(&mut self, byte: u8) {
+        if self.column >= 80 {
+            unsafe { self.data.write(b'\n') };
+            self.column = 0;
+        }
+
+        if byte == b'\n' {
+            self.column = 0;
+        }
+
         unsafe {
             while self.line_sts.read() & 0x20 == 0x0 {
                 core::hint::spin_loop();
             }
             self.data.write(byte);
         }
+        self.column += 1;
     }
 
     fn write_string(&mut self, string: &str) {
