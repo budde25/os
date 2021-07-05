@@ -157,15 +157,28 @@ lazy_static! {
 
 }
 
-pub unsafe fn disable_interrupts() {
-    asm!("cli", options(nomem, nostack));
+pub fn disable_interrupts() {
+    unsafe { asm!("cli", options(nomem, nostack)) };
 }
 
-pub unsafe fn enable_interrupts() {
-    asm!("sti", options(nomem, nostack));
+pub fn enable_interrupts() {
+    unsafe { asm!("sti", options(nomem, nostack)) };
 }
 
-pub fn interrupts_enabled() {}
+pub fn halt() {
+    unsafe { asm!("hlt", options(nomem, nostack, preserves_flags)) };
+}
+
+pub fn interrupts_enabled() -> bool {
+    use rflags::RFlags;
+    RFlags::read().contains(RFlags::INTERRUPT_ENABLE)
+}
+
+pub fn halt_loop() -> ! {
+    loop {
+        halt();
+    }
+}
 
 pub fn init() {
     GDT.0.load();
@@ -181,17 +194,15 @@ pub fn without_interrupts<F, R>(f: F) -> R
 where
     F: FnOnce() -> R,
 {
-    use rflags::RFlags;
-
-    let int_enabled = RFlags::read().contains(RFlags::INTERRUPT_ENABLE);
+    let int_enabled = interrupts_enabled();
     if int_enabled {
-        unsafe { disable_interrupts() };
+        disable_interrupts();
     }
 
     let ret = f();
 
     if int_enabled {
-        unsafe { enable_interrupts() };
+        enable_interrupts();
     }
 
     ret
@@ -204,9 +215,7 @@ mod tests {
     #[test_case]
     fn page_fault() {
         uart_disable();
-        unsafe {
-            //*(0xdeadbeef as *mut u64) = 42;
-        };
+        //*(0xdeadbeef as *mut u64) = 42;
         uart_enable();
     }
 

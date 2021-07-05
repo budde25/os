@@ -44,7 +44,7 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     println!("[failed]\n");
     println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
-    loop {}
+    interrupts::halt_loop();
 }
 
 /// Entry point for `cargo test`
@@ -54,7 +54,7 @@ pub extern "C" fn kmain() -> ! {
     interrupts::init();
     test_main();
 
-    loop {}
+    interrupts::halt_loop();
 }
 
 #[cfg(test)]

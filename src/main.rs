@@ -32,22 +32,20 @@ pub extern "C" fn kmain() -> ! {
 
     println!("Before Interrupt");
 
-    unsafe {
-        interrupts::enable_interrupts();
-    }
+    interrupts::enable_interrupts();
 
     #[cfg(test)]
     test_main();
 
     println!("Hello World");
 
-    loop {}
+    interrupts::halt_loop();
 }
 
 #[lang = "eh_personality"]
 #[no_mangle]
 extern "C" fn eh_personality() {
-    loop {}
+    interrupts::halt_loop();
 }
 
 #[panic_handler]
@@ -69,7 +67,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 #[no_mangle]
 #[cfg(not(test))]
 extern "C" fn abort() -> ! {
-    loop {}
+    interrupts::halt_loop();
 }
 
 #[no_mangle]
@@ -77,7 +75,7 @@ extern "C" fn abort() -> ! {
 extern "C" fn abort() -> ! {
     use io::port::QemuExitCode;
     exit_qemu(QemuExitCode::Failed as u32);
-    loop {}
+    interrupts::halt_loop();
 }
 
 pub fn exit_qemu(exit_code: u32) {
