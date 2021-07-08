@@ -397,12 +397,13 @@ pub mod handlers {
 
     /// Keyboard Interrupt
     pub extern "x86-interrupt" fn keyboard(_stack_frame: ExceptionStackFrame) {
-        use crate::io::port::Port;
+        use crate::io::keyboard::Keyboard;
 
-        let port = Port::new(0x60);
-        let scancode: u8 = unsafe { port.read() };
+        let keyboard = Keyboard::new();
+        if let Some(key) = keyboard.get_key() {
+            crate::print!("{}", key);
+        }
 
-        crate::print!("{}", scancode as char);
         crate::io::pic_eoi(InterruptIndex::Keyboard.into());
     }
 }
