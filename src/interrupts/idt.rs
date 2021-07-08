@@ -1,17 +1,19 @@
 use super::{DescriptorTablePointer, SegmentSelector};
+use crate::interrupts::errors::{ExceptionStackFrame, SelectorError};
 use bit_field::BitField;
 use bitflags::bitflags;
-use core::convert::Into;
+use core::{convert::Into, usize};
 use core::{
     fmt::{self, Debug, Formatter},
     marker::PhantomData,
 };
-use handlers::ExceptionStackFrame;
 
 pub trait Handler {}
 
 pub type HandlerFunc = extern "x86-interrupt" fn(_: ExceptionStackFrame);
 pub type HandlerFuncErrorCode = extern "x86-interrupt" fn(_: ExceptionStackFrame, _: u64);
+pub type SegmentNotPresentHandlerFunc =
+    extern "x86-interrupt" fn(_: ExceptionStackFrame, _: SelectorError);
 pub type DivergingHandlerFuncErrorCode =
     extern "x86-interrupt" fn(_: ExceptionStackFrame, _: u64) -> !;
 pub type DivergingHandlerFunc = extern "x86-interrupt" fn(_: ExceptionStackFrame) -> !;
@@ -37,7 +39,7 @@ pub struct InterruptDescriptorTable {
     pub double_fault: Entry<DivergingHandlerFuncErrorCode>,
     coprocessor_segment_overrun: Entry<HandlerFunc>,
     pub invalid_tss: Entry<HandlerFuncErrorCode>,
-    pub segment_not_present: Entry<HandlerFuncErrorCode>,
+    pub segment_not_present: Entry<SegmentNotPresentHandlerFunc>,
     pub stack_segment_fault: Entry<HandlerFuncErrorCode>,
     pub general_protection_fault: Entry<HandlerFuncErrorCode>,
     pub page_fault: Entry<HandlerFuncErrorCode>,
@@ -151,6 +153,7 @@ macro_rules! impl_set_handler {
 
 impl_set_handler!(HandlerFunc);
 impl_set_handler!(HandlerFuncErrorCode);
+impl_set_handler!(SegmentNotPresentHandlerFunc);
 //impl_set_handler!(PageFaultHandlerFunc);
 impl_set_handler!(DivergingHandlerFunc);
 impl_set_handler!(DivergingHandlerFuncErrorCode);
@@ -217,11 +220,16 @@ impl Default for Options {
 #[repr(u8)]
 pub enum InterruptIndex {
     Timer = 0,
+    Keyboard,
 }
 
-impl Into<u8> for InterruptIndex {
-    fn into(self) -> u8 {
-        self as u8
+impl From<usize> for InterruptIndex {
+    fn from(num: usize) -> Self {
+        match num {
+            0 => InterruptIndex::Timer,
+            1 => InterruptIndex::Keyboard,
+            _ => unreachable!(),
+        }
     }
 }
 
@@ -231,42 +239,16 @@ impl Into<usize> for InterruptIndex {
     }
 }
 
+impl From<u8> for InterruptIndex {
+    fn from(num: u8) -> Self {
+        Self::from(num as usize)
+    }
+}
+
 pub mod handlers {
     use super::InterruptIndex;
-    use crate::address::virt::VirtualAddress;
-    use crate::interrupts::{rflags::RFlags, SegmentSelector};
+    use crate::interrupts::errors::{ExceptionStackFrame, SelectorError};
     use crate::println;
-    use core::fmt;
-
-    #[derive(Clone, Copy)]
-    #[repr(C, packed)]
-    pub struct ExceptionStackFrame {
-        pub instruction_pointer: VirtualAddress,
-        pub code_segment: SegmentSelector,
-        _reserved_1: [u8; 6],
-        cpu_flags: RFlags,
-        stack_pointer: VirtualAddress,
-        stack_segment: SegmentSelector,
-        _reserved_2: [u8; 6],
-    }
-
-    impl fmt::Debug for ExceptionStackFrame {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            let instruction_pointer = self.instruction_pointer;
-            let code_segment = self.code_segment;
-            let cpu_flags = self.cpu_flags;
-            let stack_pointer = self.stack_pointer;
-            let stack_segment = self.stack_segment;
-
-            let mut s = f.debug_struct("ExceptionStackFrame");
-            s.field("instruction_pointer", &instruction_pointer);
-            s.field("code_segment", &code_segment);
-            s.field("cpu_flags", &cpu_flags);
-            s.field("stack_pointer", &stack_pointer);
-            s.field("stack_segment", &stack_segment);
-            s.finish()
-        }
-    }
 
     /// 1
     pub extern "x86-interrupt" fn divide_by_zero(stack_frame: ExceptionStackFrame) {
@@ -327,10 +309,10 @@ pub mod handlers {
     /// 11
     pub extern "x86-interrupt" fn segment_not_present(
         stack_frame: ExceptionStackFrame,
-        error_code: u64,
+        error_code: SelectorError,
     ) {
         println!(
-            "EXCEPTION: SEGMENT_NOT_PRESENT\n{:#?}\nError Code: {}",
+            "EXCEPTION: SEGMENT_NOT_PRESENT\n{:#?}\n{:#?}",
             stack_frame, error_code
         );
     }
@@ -411,6 +393,17 @@ pub mod handlers {
     pub extern "x86-interrupt" fn timer(_stack_frame: ExceptionStackFrame) {
         crate::print!(".");
         crate::io::pic_eoi(InterruptIndex::Timer.into());
+    }
+
+    /// Keyboard Interrupt
+    pub extern "x86-interrupt" fn keyboard(_stack_frame: ExceptionStackFrame) {
+        use crate::io::port::Port;
+
+        let port = Port::new(0x60);
+        let scancode: u8 = unsafe { port.read() };
+
+        crate::print!("{}", scancode as char);
+        crate::io::pic_eoi(InterruptIndex::Keyboard.into());
     }
 }
 

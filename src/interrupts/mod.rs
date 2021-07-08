@@ -6,6 +6,7 @@ use gdt::GlobalDescriptorTable;
 
 use tss::TaskStateSegment;
 
+pub mod errors;
 pub mod gdt;
 pub mod idt;
 pub mod rflags;
@@ -118,6 +119,7 @@ lazy_static! {
 
         // interrupt handlers
         idt.interrupts[InterruptIndex::Timer as usize].set_handler(timer);
+        idt.interrupts[InterruptIndex::Keyboard as usize].set_handler(keyboard);
 
         idt
     };

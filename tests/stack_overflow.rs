@@ -9,9 +9,7 @@ use lazy_static::lazy_static;
 use os::{
     exit_qemu,
     interrupts::{
-        gdt,
-        idt::{handlers::ExceptionStackFrame, InterruptDescriptorTable},
-        DOUBLE_FAULT_IST_INDEX,
+        errors::ExceptionStackFrame, gdt, idt::InterruptDescriptorTable, DOUBLE_FAULT_IST_INDEX,
     },
     io::port::QemuExitCode,
     uart,
