@@ -220,14 +220,18 @@ impl Default for Options {
 #[repr(u8)]
 pub enum InterruptIndex {
     Timer = 0,
-    Keyboard,
+    Keyboard = 1,
+    Error = 19,
+    Spurious = 31,
 }
 
 impl From<usize> for InterruptIndex {
     fn from(num: usize) -> Self {
         match num {
-            0 => InterruptIndex::Timer,
-            1 => InterruptIndex::Keyboard,
+            0 => Self::Timer,
+            1 => Self::Keyboard,
+            19 => Self::Error,
+            31 => Self::Spurious,
             _ => unreachable!(),
         }
     }
