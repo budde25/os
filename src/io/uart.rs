@@ -46,6 +46,8 @@ impl Uart {
         }
     }
 
+    /// # Safety
+    /// The correct things to write according to osdev wiki
     pub unsafe fn init(&mut self) {
         self.int_en.write(0x00); // Disable all interrupts
         self.line_ctrl.write(0x80); // Enable DLAB (set baud rate divisor)

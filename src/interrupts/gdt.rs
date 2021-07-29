@@ -38,6 +38,14 @@ impl GlobalDescriptorTable {
     }
 }
 
+impl Default for GlobalDescriptorTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// # Safety
+/// Only load once
 #[inline]
 pub unsafe fn load_cs(segment: SegmentSelector) {
     asm!(
@@ -52,6 +60,8 @@ pub unsafe fn load_cs(segment: SegmentSelector) {
     );
 }
 
+/// # Safety
+/// Only load once
 #[inline]
 pub unsafe fn load_tss(segment: SegmentSelector) {
     asm!("ltr {0:x}", in(reg) segment.0, options(nomem, nostack, preserves_flags));

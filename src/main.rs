@@ -81,7 +81,7 @@ extern "C" fn abort() -> ! {
 pub fn exit_qemu(exit_code: u32) {
     use io::port::Port;
     unsafe {
-        let port = Port::new(0xf4);
+        let mut port = Port::new(0xf4);
         port.write(exit_code as u32);
     }
 }
@@ -97,7 +97,7 @@ fn test_runner(tests: &[&dyn Testable]) {
 }
 
 pub trait Testable {
-    fn run(&self) -> ();
+    fn run(&self);
 }
 
 impl<T> Testable for T

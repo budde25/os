@@ -1,9 +1,12 @@
 #![no_std]
 #![cfg_attr(test, no_main)]
-#![feature(custom_test_frameworks, asm, global_asm, abi_x86_interrupt)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![allow(dead_code)]
+#![feature(custom_test_frameworks)]
+#![feature(asm)]
+#![feature(global_asm)]
+#![feature(abi_x86_interrupt)]
 
 global_asm!(include_str!("arch/x86_64/boot_32.s"));
 global_asm!(include_str!("arch/x86_64/boot_64.s"));
@@ -18,7 +21,7 @@ use io::port::{Port, QemuExitCode};
 
 /// Defines a run function
 pub trait Testable {
-    fn run(&self) -> ();
+    fn run(&self);
 }
 
 impl<T> Testable for T
@@ -65,7 +68,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 pub fn exit_qemu(exit_code: QemuExitCode) {
     unsafe {
-        let port = Port::new(0xf4);
+        let mut port = Port::new(0xf4);
         port.write(exit_code as u32);
     }
 }

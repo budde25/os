@@ -2,7 +2,7 @@ use super::{DescriptorTablePointer, SegmentSelector};
 use crate::interrupts::errors::{ExceptionStackFrame, SelectorError};
 use bit_field::BitField;
 use bitflags::bitflags;
-use core::{convert::Into, usize};
+use core::usize;
 use core::{
     fmt::{self, Debug, Formatter},
     marker::PhantomData,
@@ -98,6 +98,12 @@ impl InterruptDescriptorTable {
     }
 }
 
+impl Default for InterruptDescriptorTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone, Copy, Default)]
 #[repr(C)]
 pub struct Entry<T> {
@@ -135,8 +141,8 @@ impl<T> Entry<T> {
 
     fn get_handler(&self) -> u64 {
         let mut handler: u64 = self.handler_low as u64;
-        handler = handler | ((self.handler_middle as u64) << 16);
-        handler = handler | ((self.handler_high as u64) << 32);
+        handler |= (self.handler_middle as u64) << 16;
+        handler |= (self.handler_high as u64) << 32;
         handler
     }
 }
@@ -233,9 +239,9 @@ impl From<usize> for InterruptIndex {
     }
 }
 
-impl Into<usize> for InterruptIndex {
-    fn into(self) -> usize {
-        self as usize
+impl From<InterruptIndex> for usize {
+    fn from(index: InterruptIndex) -> Self {
+        index as usize
     }
 }
 
@@ -391,7 +397,7 @@ pub mod handlers {
 
     /// Timer Interrupt
     pub extern "x86-interrupt" fn timer(_stack_frame: ExceptionStackFrame) {
-        crate::print!(".");
+        //crate::print!(".");
         crate::io::pic_eoi(InterruptIndex::Timer.into());
     }
 

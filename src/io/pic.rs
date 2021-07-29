@@ -99,8 +99,8 @@ impl Pic {
     /// Remap the pic
     pub fn remap(&mut self) {
         unsafe {
-            let wait_port: Port<u8> = Port::new(0x80);
-            let wait = || wait_port.write(0);
+            let mut wait_port: Port<u8> = Port::new(0x80);
+            let mut wait = || wait_port.write(0);
 
             // save masks
             let mask: u8 = self.data.read();

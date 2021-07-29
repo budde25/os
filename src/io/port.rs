@@ -28,10 +28,14 @@ impl<T: PortIO> Port<T> {
         self.port
     }
 
-    pub unsafe fn write(&self, value: T) {
+    /// # Safety
+    /// This cuntion is unsafe
+    pub unsafe fn write(&mut self, value: T) {
         T::write(self.port, value);
     }
 
+    /// # Safety
+    /// This function is unsafe
     pub unsafe fn read(&self) -> T {
         T::read(self.port)
     }
@@ -40,8 +44,12 @@ impl<T: PortIO> Port<T> {
 /// A port IO trait that lets us define what types can be used with port I/O
 pub trait PortIO {
     /// lets you write to the port
+    /// # Safety
+    /// This function is unsafe
     unsafe fn write(port: u16, value: Self);
     /// let you read from the port
+    /// # Safety
+    /// This function is unsafe
     unsafe fn read(port: u16) -> Self;
 }
 

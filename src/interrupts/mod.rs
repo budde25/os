@@ -151,8 +151,7 @@ lazy_static! {
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
             let stack_start = unsafe { &STACK as *const _ as u64};
-            let stack_end = stack_start + STACK_SIZE as u64;
-            stack_end
+            stack_start + STACK_SIZE as u64
         };
         tss
     };
