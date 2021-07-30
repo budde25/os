@@ -65,43 +65,40 @@ fn pic_disable() {
     PIC_2.lock().disable();
 }
 
+#[macro_export]
+macro_rules! kernel_dbg {
+    () => {
+        $crate::kernel_println!("[{}:{}]", file!(), line!());
+    };
+    ($val:expr) => {
+        // Use of `match` here is intentional because it affects the lifetimes
+        // of temporaries - https://stackoverflow.com/a/48732525/1063961
+        match $val {
+            tmp => {
+                $crate::kernel_println!("[{}:{}] {} = {:#?}",
+                    file!(), line!(), stringify!($val), &tmp);
+                tmp
+            }
+        }
+    };
+    // Trailing comma with single argument is ignored
+    ($val:expr,) => { $crate::kernel_dbg!($val) };
+    ($($val:expr),+ $(,)?) => {
+        ($($crate::kernel_dbg!($val)),+,)
+    };
+}
+
 /// Print that writes to VGA buffer and Uart
 #[macro_export]
-macro_rules! print {
+macro_rules! kernel_print {
     ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
 }
 
 /// Print line that writes to VGA and Uart
 #[macro_export]
-macro_rules! println {
+macro_rules! kernel_println {
     () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
-}
-
-/// Print that writes to only Uart
-#[macro_export]
-macro_rules! uart {
-    ($($arg:tt)*) => ($crate::io::_print_uart(format_args!($($arg)*)));
-}
-
-/// Print line that writes to only Uart
-#[macro_export]
-macro_rules! uartln {
-    () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::uart!("{}\n", format_args!($($arg)*)));
-}
-
-/// Print that writes to only VGA buffer
-#[macro_export]
-macro_rules! vga {
-    ($($arg:tt)*) => ($crate::io::_print_vga(format_args!($($arg)*)));
-}
-
-/// Print line that writes to only VGA buffer
-#[macro_export]
-macro_rules! vgaln {
-    () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::vga!("{}\n", format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::kernel_print!("{}\n", format_args!($($arg)*)));
 }
 
 #[doc(hidden)]

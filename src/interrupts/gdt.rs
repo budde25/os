@@ -7,7 +7,6 @@ use arrayvec::ArrayVec;
 use bit_field::BitField;
 use bitflags::bitflags;
 use core::fmt::{self, Debug, Formatter};
-use core::ops::Deref;
 
 #[derive(Debug, Clone, Hash)]
 #[repr(C)]
@@ -29,10 +28,9 @@ impl GlobalDescriptorTable {
 
     fn pointer(&self) -> DescriptorTablePointer {
         use core::mem::size_of;
-        let size = self.0.deref().len();
         DescriptorTablePointer {
             base: self.0.as_ptr() as u64,
-            limit: ((size_of::<Self>() * size) - 1) as u16,
+            limit: ((size_of::<Self>() * self.0.capacity()) - 1) as u16,
         }
     }
 

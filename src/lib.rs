@@ -29,14 +29,14 @@ where
     T: Fn(),
 {
     fn run(&self) {
-        print!("{}...\t", core::any::type_name::<T>());
+        kernel_print!("{}...\t", core::any::type_name::<T>());
         self();
-        println!("[ok]");
+        kernel_println!("[ok]");
     }
 }
 
 pub fn test_runner(tests: &[&dyn Testable]) {
-    println!("Running {} tests", tests.len());
+    kernel_println!("Running {} tests", tests.len());
     for test in tests {
         test.run();
     }
@@ -44,8 +44,8 @@ pub fn test_runner(tests: &[&dyn Testable]) {
 }
 
 pub fn test_panic_handler(info: &PanicInfo) -> ! {
-    println!("[failed]\n");
-    println!("Error: {}\n", info);
+    kernel_println!("[failed]\n");
+    kernel_println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
     interrupts::halt_loop();
 }
