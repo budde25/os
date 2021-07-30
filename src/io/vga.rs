@@ -168,20 +168,21 @@ impl fmt::Write for Vga {
 
 #[cfg(test)]
 mod tests {
+    use crate::kernel_print;
+
     use super::super::VGA;
-    use crate::vga;
 
     #[test_case]
     fn test_println_simple() {
         VGA.lock().clear_screen();
-        vga!("test_vga_simple output");
+        kernel_print!("test_vga_simple output");
     }
 
     #[test_case]
     fn test_println_many() {
         VGA.lock().clear_screen();
         for _ in 0..200 {
-            vga!("test_vga_many output");
+            kernel_print!("test_vga_many output");
         }
     }
 }

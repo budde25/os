@@ -1,6 +1,7 @@
-use super::port::Port;
-use super::IRQ_0;
 use bitflags::bitflags;
+use port::Port;
+
+pub const PIC_1_OFFSET: u8 = 32;
 
 bitflags! {
     pub struct ICW1: u8 {
@@ -90,16 +91,16 @@ impl Pic {
 
     fn get_offset(&self) -> u8 {
         match self.pic_type() {
-            PicType::Pic1 => IRQ_0,
-            PicType::Pic2 => IRQ_0 + 8,
+            PicType::Pic1 => PIC_1_OFFSET,
+            PicType::Pic2 => PIC_1_OFFSET + 8,
         }
     }
 
     /// Remap the pic
     pub fn remap(&mut self) {
         unsafe {
-            let wait_port: Port<u8> = Port::new(0x80);
-            let wait = || wait_port.write(0);
+            let mut wait_port: Port<u8> = Port::new(0x80);
+            let mut wait = || wait_port.write(0);
 
             // save masks
             let mask: u8 = self.data.read();

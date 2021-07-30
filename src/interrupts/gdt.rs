@@ -3,21 +3,25 @@ use crate::interrupts::tss::TaskStateSegment;
 use crate::interrupts::DescriptorTablePointer;
 
 use super::{PrivilegeLevel, SegmentSelector};
+use arrayvec::ArrayVec;
 use bit_field::BitField;
 use bitflags::bitflags;
 use core::fmt::{self, Debug, Formatter};
 
-#[derive(Debug, Clone, Copy, Hash)]
-#[repr(C, packed)]
-pub struct GlobalDescriptorTable([Entry; 8]);
+#[derive(Debug, Clone, Hash)]
+#[repr(C)]
+pub struct GlobalDescriptorTable(ArrayVec<Entry, 8>);
 
 impl GlobalDescriptorTable {
     pub fn new() -> Self {
-        Self([Entry::zero(); 8])
+        let mut gdt = ArrayVec::new_const();
+        gdt.push(Entry::zero()); // push one null entry
+        Self(gdt)
     }
 
-    pub fn set_entry(&mut self, index: u8, entry: Entry) -> SegmentSelector {
-        self.0[index as usize] = entry;
+    pub fn push(&mut self, entry: Entry) -> SegmentSelector {
+        let index = self.0.len();
+        self.0.push(entry);
         // TODO support more then just ring0
         SegmentSelector::new(index as u16, PrivilegeLevel::Ring0)
     }
@@ -26,7 +30,7 @@ impl GlobalDescriptorTable {
         use core::mem::size_of;
         DescriptorTablePointer {
             base: self.0.as_ptr() as u64,
-            limit: (size_of::<Self>() - 1) as u16,
+            limit: ((size_of::<Self>() * self.0.capacity()) - 1) as u16,
         }
     }
 
@@ -38,6 +42,14 @@ impl GlobalDescriptorTable {
     }
 }
 
+impl Default for GlobalDescriptorTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// # Safety
+/// Only load once
 #[inline]
 pub unsafe fn load_cs(segment: SegmentSelector) {
     asm!(
@@ -52,6 +64,8 @@ pub unsafe fn load_cs(segment: SegmentSelector) {
     );
 }
 
+/// # Safety
+/// Only load once
 #[inline]
 pub unsafe fn load_tss(segment: SegmentSelector) {
     asm!("ltr {0:x}", in(reg) segment.0, options(nomem, nostack, preserves_flags));
@@ -244,7 +258,7 @@ mod tests {
     /// Make sure the gdt struct is getting correctly packed
     #[test_case]
     fn gdt_struct_size() {
-        assert_eq!(size_of::<GlobalDescriptorTable>(), 8 * 8);
+        assert_eq!(size_of::<Entry>() * 8, 8 * 8);
     }
 
     /// Linux defaults

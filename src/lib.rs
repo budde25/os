@@ -1,9 +1,12 @@
 #![no_std]
 #![cfg_attr(test, no_main)]
-#![feature(custom_test_frameworks, asm, global_asm, abi_x86_interrupt)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![allow(dead_code)]
+#![feature(custom_test_frameworks)]
+#![feature(asm)]
+#![feature(global_asm)]
+#![feature(abi_x86_interrupt)]
 
 global_asm!(include_str!("arch/x86_64/boot_32.s"));
 global_asm!(include_str!("arch/x86_64/boot_64.s"));
@@ -13,12 +16,16 @@ pub mod address;
 pub mod interrupts;
 pub mod io;
 
-use core::panic::PanicInfo;
-use io::port::{Port, QemuExitCode};
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum QemuExitCode {
+    Success = 0x10,
+    Failed = 0x11,
+}
 
 /// Defines a run function
 pub trait Testable {
-    fn run(&self) -> ();
+    fn run(&self);
 }
 
 impl<T> Testable for T
@@ -26,23 +33,23 @@ where
     T: Fn(),
 {
     fn run(&self) {
-        print!("{}...\t", core::any::type_name::<T>());
+        kernel_print!("{}...\t", core::any::type_name::<T>());
         self();
-        println!("[ok]");
+        kernel_println!("[ok]");
     }
 }
 
 pub fn test_runner(tests: &[&dyn Testable]) {
-    println!("Running {} tests", tests.len());
+    kernel_println!("Running {} tests", tests.len());
     for test in tests {
         test.run();
     }
     exit_qemu(QemuExitCode::Success);
 }
 
-pub fn test_panic_handler(info: &PanicInfo) -> ! {
-    println!("[failed]\n");
-    println!("Error: {}\n", info);
+pub fn test_panic_handler(info: &core::panic::PanicInfo) -> ! {
+    kernel_println!("[failed]\n");
+    kernel_println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
     interrupts::halt_loop();
 }
@@ -59,13 +66,12 @@ pub extern "C" fn kmain() -> ! {
 
 #[cfg(test)]
 #[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
+fn panic(info: &core::panic::PanicInfo) -> ! {
     test_panic_handler(info)
 }
 
 pub fn exit_qemu(exit_code: QemuExitCode) {
-    unsafe {
-        let port = Port::new(0xf4);
-        port.write(exit_code as u32);
-    }
+    use port::Port;
+    let mut port = Port::new(0xf4);
+    unsafe { port.write(exit_code as u32) };
 }

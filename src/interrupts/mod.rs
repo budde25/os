@@ -130,15 +130,15 @@ lazy_static! {
         let mut gdt = GlobalDescriptorTable::new();
 
         // initialized to be empty and zero should be null anyway
-        let kernel_code_segment = gdt.set_entry(1, Entry::new(0, Flags::CODE_PL_ZERO));
-        gdt.set_entry(2, Entry::new(0, Flags::DATA_PL_ZERO));
-        gdt.set_entry(3, Entry::new(0, Flags::CODE_PL_THREE));
-        gdt.set_entry(4, Entry::new(0, Flags::DATA_PL_THREE));
+        let kernel_code_segment = gdt.push(Entry::new(0, Flags::CODE_PL_ZERO));
+        gdt.push(Entry::new(0, Flags::DATA_PL_ZERO));
+        gdt.push(Entry::new(0, Flags::CODE_PL_THREE));
+        gdt.push(Entry::new(0, Flags::DATA_PL_THREE));
 
         // tss
         let (tss_segment_1, tss_segment_2) = Entry::tss(&TSS);
-        let tss_segment = gdt.set_entry(5, tss_segment_1);
-        gdt.set_entry(6, tss_segment_2);
+        let tss_segment = gdt.push(tss_segment_1);
+        gdt.push(tss_segment_2);
 
         (gdt, Selectors {kernel_code_segment, tss_segment})
     };
@@ -151,8 +151,7 @@ lazy_static! {
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
             let stack_start = unsafe { &STACK as *const _ as u64};
-            let stack_end = stack_start + STACK_SIZE as u64;
-            stack_end
+            stack_start + STACK_SIZE as u64
         };
         tss
     };

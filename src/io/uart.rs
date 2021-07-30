@@ -1,5 +1,5 @@
-use super::port::Port;
 use core::fmt;
+use port::Port;
 
 static COM1: u16 = 0x3F8;
 type Register = Port<u8>;
@@ -46,6 +46,8 @@ impl Uart {
         }
     }
 
+    /// # Safety
+    /// The correct things to write according to osdev wiki
     pub unsafe fn init(&mut self) {
         self.int_en.write(0x00); // Disable all interrupts
         self.line_ctrl.write(0x80); // Enable DLAB (set baud rate divisor)

@@ -1,7 +1,6 @@
 use crate::address::virt::VirtualAddress;
 use crate::interrupts::{rflags::RFlags, SegmentSelector};
 use bit_field::BitField;
-use core::convert::From;
 use core::fmt::{self, Debug};
 
 #[derive(Clone, Copy)]
@@ -36,22 +35,9 @@ impl Debug for ExceptionStackFrame {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DescriptorTable {
-    GDT,
-    IDT,
-    LDT,
-}
-
-impl From<u64> for DescriptorTable {
-    fn from(num: u64) -> Self {
-        assert!(num < 4);
-        match num {
-            0 => DescriptorTable::GDT,
-            1 => DescriptorTable::IDT,
-            2 => DescriptorTable::LDT,
-            3 => DescriptorTable::IDT,
-            _ => unreachable!(),
-        }
-    }
+    Gdt,
+    Idt,
+    Ldt,
 }
 
 // needs to be transparent u64, otherwise on LLVM 12 we get "unsupported x86 interrupt prototype"
@@ -67,7 +53,13 @@ impl SelectorError {
     }
 
     fn descriptor_table(&self) -> DescriptorTable {
-        self.flags.get_bits(1..3).into()
+        match self.flags.get_bits(1..3) {
+            0 => DescriptorTable::Gdt,
+            1 => DescriptorTable::Idt,
+            2 => DescriptorTable::Ldt,
+            3 => DescriptorTable::Idt,
+            _ => unreachable!(),
+        }
     }
 
     fn selector_index(&self) -> u64 {

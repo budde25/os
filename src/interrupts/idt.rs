@@ -2,7 +2,7 @@ use super::{DescriptorTablePointer, SegmentSelector};
 use crate::interrupts::errors::{ExceptionStackFrame, SelectorError};
 use bit_field::BitField;
 use bitflags::bitflags;
-use core::{convert::Into, usize};
+use core::usize;
 use core::{
     fmt::{self, Debug, Formatter},
     marker::PhantomData,
@@ -98,6 +98,12 @@ impl InterruptDescriptorTable {
     }
 }
 
+impl Default for InterruptDescriptorTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone, Copy, Default)]
 #[repr(C)]
 pub struct Entry<T> {
@@ -135,8 +141,8 @@ impl<T> Entry<T> {
 
     fn get_handler(&self) -> u64 {
         let mut handler: u64 = self.handler_low as u64;
-        handler = handler | ((self.handler_middle as u64) << 16);
-        handler = handler | ((self.handler_high as u64) << 32);
+        handler |= (self.handler_middle as u64) << 16;
+        handler |= (self.handler_high as u64) << 32;
         handler
     }
 }
@@ -237,9 +243,9 @@ impl From<usize> for InterruptIndex {
     }
 }
 
-impl Into<usize> for InterruptIndex {
-    fn into(self) -> usize {
-        self as usize
+impl From<InterruptIndex> for usize {
+    fn from(index: InterruptIndex) -> Self {
+        index as usize
     }
 }
 
@@ -252,46 +258,46 @@ impl From<u8> for InterruptIndex {
 pub mod handlers {
     use super::InterruptIndex;
     use crate::interrupts::errors::{ExceptionStackFrame, SelectorError};
-    use crate::println;
+    use crate::kernel_println;
 
     /// 1
     pub extern "x86-interrupt" fn divide_by_zero(stack_frame: ExceptionStackFrame) {
-        println!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame);
+        kernel_println!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame);
     }
 
     /// 2
     pub extern "x86-interrupt" fn debug(stack_frame: ExceptionStackFrame) {
-        println!("EXCEPTION: DEBUG\n{:#?}", stack_frame);
+        kernel_println!("EXCEPTION: DEBUG\n{:#?}", stack_frame);
     }
 
     /// 3
     pub extern "x86-interrupt" fn non_maskable_interrupt(stack_frame: ExceptionStackFrame) {
-        println!("EXCEPTION: NON MASKABLE INTERRUPT\n{:#?}", stack_frame);
+        kernel_println!("EXCEPTION: NON MASKABLE INTERRUPT\n{:#?}", stack_frame);
     }
 
     /// 4
     pub extern "x86-interrupt" fn breakpoint(stack_frame: ExceptionStackFrame) {
-        println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+        kernel_println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
     }
 
     /// 5
     pub extern "x86-interrupt" fn overflow(stack_frame: ExceptionStackFrame) {
-        println!("EXCEPTION: OVERFLOW\n{:#?}", stack_frame);
+        kernel_println!("EXCEPTION: OVERFLOW\n{:#?}", stack_frame);
     }
 
     /// 6
     pub extern "x86-interrupt" fn bound_range_exceeded(stack_frame: ExceptionStackFrame) {
-        println!("EXCEPTION: BOUND RANGE EXCEEDED\n{:#?}", stack_frame);
+        kernel_println!("EXCEPTION: BOUND RANGE EXCEEDED\n{:#?}", stack_frame);
     }
 
     /// 7
     pub extern "x86-interrupt" fn invalid_opcode(stack_frame: ExceptionStackFrame) {
-        println!("EXCEPTION: INVALID_OPCODE\n{:#?}", stack_frame);
+        kernel_println!("EXCEPTION: INVALID_OPCODE\n{:#?}", stack_frame);
     }
 
     /// 8
     pub extern "x86-interrupt" fn device_not_available(stack_frame: ExceptionStackFrame) {
-        println!("EXCEPTION: DEVICE NOT AVAILABLE\n{:#?}", stack_frame);
+        kernel_println!("EXCEPTION: DEVICE NOT AVAILABLE\n{:#?}", stack_frame);
     }
 
     /// 9
@@ -304,9 +310,10 @@ pub mod handlers {
 
     /// 10
     pub extern "x86-interrupt" fn invalid_tss(stack_frame: ExceptionStackFrame, error_code: u64) {
-        println!(
+        kernel_println!(
             "EXCEPTION: INVALID_TSS\n{:#?}\nError Code: {}",
-            stack_frame, error_code
+            stack_frame,
+            error_code
         );
     }
 
@@ -315,9 +322,10 @@ pub mod handlers {
         stack_frame: ExceptionStackFrame,
         error_code: SelectorError,
     ) {
-        println!(
+        kernel_println!(
             "EXCEPTION: SEGMENT_NOT_PRESENT\n{:#?}\n{:#?}",
-            stack_frame, error_code
+            stack_frame,
+            error_code
         );
     }
 
@@ -326,9 +334,10 @@ pub mod handlers {
         stack_frame: ExceptionStackFrame,
         error_code: u64,
     ) {
-        println!(
+        kernel_println!(
             "EXCEPTION: STACK SEGMENT FAULT\n{:#?}\nError Code: {}",
-            stack_frame, error_code
+            stack_frame,
+            error_code
         );
     }
 
@@ -337,23 +346,25 @@ pub mod handlers {
         stack_frame: ExceptionStackFrame,
         error_code: u64,
     ) {
-        println!(
+        kernel_println!(
             "EXCEPTION: GENERAL PROTECTION FAULT\n{:#?}\nError Code: {}",
-            stack_frame, error_code
+            stack_frame,
+            error_code
         );
     }
 
     /// 14
     pub extern "x86-interrupt" fn page_fault(stack_frame: ExceptionStackFrame, error_code: u64) {
-        println!(
+        kernel_println!(
             "EXCEPTION: PAGE FAULT\n{:#?}\nError Code: {}",
-            stack_frame, error_code
+            stack_frame,
+            error_code
         );
     }
 
     /// 15
     pub extern "x86-interrupt" fn x87_floating_point(stack_frame: ExceptionStackFrame) {
-        println!("EXCEPTION: x87 FLOATING POINT\n{:#?}", stack_frame);
+        kernel_println!("EXCEPTION: x87 FLOATING POINT\n{:#?}", stack_frame);
     }
 
     /// 16
@@ -361,9 +372,10 @@ pub mod handlers {
         stack_frame: ExceptionStackFrame,
         error_code: u64,
     ) {
-        println!(
+        kernel_println!(
             "EXCEPTION: x87 FLOATING POINT\n{:#?}\nError Code: {}",
-            stack_frame, error_code
+            stack_frame,
+            error_code
         );
     }
 
@@ -374,12 +386,12 @@ pub mod handlers {
 
     /// 18
     pub extern "x86-interrupt" fn simd_floating_point(stack_frame: ExceptionStackFrame) {
-        println!("EXCEPTION: SIMD FLOATING POINT\n{:#?}", stack_frame);
+        kernel_println!("EXCEPTION: SIMD FLOATING POINT\n{:#?}", stack_frame);
     }
 
     /// 19
     pub extern "x86-interrupt" fn virtualization(stack_frame: ExceptionStackFrame) {
-        println!("EXCEPTION: VIRTUALIZATION\n{:#?}", stack_frame);
+        kernel_println!("EXCEPTION: VIRTUALIZATION\n{:#?}", stack_frame);
     }
 
     /// 20
@@ -387,15 +399,16 @@ pub mod handlers {
         stack_frame: ExceptionStackFrame,
         error_code: u64,
     ) {
-        println!(
+        kernel_println!(
             "EXCEPTION: VIRTUALIZATION\n{:#?}\nError Code: {}",
-            stack_frame, error_code
+            stack_frame,
+            error_code
         );
     }
 
     /// Timer Interrupt
     pub extern "x86-interrupt" fn timer(_stack_frame: ExceptionStackFrame) {
-        crate::print!(".");
+        //crate::print!(".");
         crate::io::pic_eoi(InterruptIndex::Timer.into());
     }
 
@@ -405,7 +418,7 @@ pub mod handlers {
 
         let keyboard = Keyboard::new();
         if let Some(key) = keyboard.get_key() {
-            crate::print!("{}", key);
+            crate::kernel_print!("{}", key);
         }
 
         crate::io::pic_eoi(InterruptIndex::Keyboard.into());

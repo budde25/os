@@ -1,14 +1,11 @@
 #![no_std]
 #![no_main]
-#![feature(
-    panic_info_message,
-    asm,
-    global_asm,
-    lang_items,
-    custom_test_frameworks,
-    llvm_asm,
-    abi_x86_interrupt
-)]
+#![feature(panic_info_message)]
+#![feature(asm)]
+#![feature(global_asm)]
+#![feature(lang_items)]
+#![feature(custom_test_frameworks)]
+#![feature(abi_x86_interrupt)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![allow(dead_code)]
@@ -20,6 +17,13 @@ mod address;
 mod interrupts;
 mod io;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum QemuExitCode {
+    Success = 0x10,
+    Failed = 0x11,
+}
+
 /// Kernel entry point
 #[no_mangle]
 pub extern "C" fn kmain() -> ! {
@@ -30,14 +34,14 @@ pub extern "C" fn kmain() -> ! {
     // Remap and disable the pic
     io::pic_init();
 
-    println!("Before Interrupt");
+    kernel_println!("Before Interrupt");
 
     interrupts::enable_interrupts();
 
     #[cfg(test)]
     test_main();
 
-    println!("Hello World");
+    kernel_println!("Hello World");
 
     interrupts::halt_loop();
 }
@@ -50,16 +54,16 @@ extern "C" fn eh_personality() {
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    print!("Aborting: ");
+    kernel_print!("Aborting: ");
     if let Some(p) = info.location() {
-        println!(
+        kernel_println!(
             "line {}, file {}: {}",
             p.line(),
             p.file(),
             info.message().unwrap()
         );
     } else {
-        println!("no information available.");
+        kernel_println!("no information available.");
     }
     abort();
 }
@@ -73,23 +77,21 @@ extern "C" fn abort() -> ! {
 #[no_mangle]
 #[cfg(test)]
 extern "C" fn abort() -> ! {
-    use io::port::QemuExitCode;
     exit_qemu(QemuExitCode::Failed as u32);
     interrupts::halt_loop();
 }
 
 pub fn exit_qemu(exit_code: u32) {
-    use io::port::Port;
+    use port::Port;
     unsafe {
-        let port = Port::new(0xf4);
+        let mut port = Port::new(0xf4);
         port.write(exit_code as u32);
     }
 }
 
 #[cfg(test)]
 fn test_runner(tests: &[&dyn Testable]) {
-    use io::port::QemuExitCode;
-    println!("Running {} tests", tests.len());
+    kernel_println!("Running {} tests", tests.len());
     for test in tests {
         test.run();
     }
@@ -97,7 +99,7 @@ fn test_runner(tests: &[&dyn Testable]) {
 }
 
 pub trait Testable {
-    fn run(&self) -> ();
+    fn run(&self);
 }
 
 impl<T> Testable for T
@@ -105,16 +107,8 @@ where
     T: Fn(),
 {
     fn run(&self) {
-        print!("{}...\t", core::any::type_name::<T>());
+        kernel_print!("{}...\t", core::any::type_name::<T>());
         self();
-        println!("[ok]");
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test_case]
-    fn trivial_assertion() {
-        assert_eq!(1, 1);
+        kernel_println!("[ok]");
     }
 }
