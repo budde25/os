@@ -3,30 +3,36 @@ use crate::interrupts::tss::TaskStateSegment;
 use crate::interrupts::DescriptorTablePointer;
 
 use super::{PrivilegeLevel, SegmentSelector};
+use arrayvec::ArrayVec;
 use bit_field::BitField;
 use bitflags::bitflags;
 use core::fmt::{self, Debug, Formatter};
+use core::ops::Deref;
 
-#[derive(Debug, Clone, Copy, Hash)]
-#[repr(C, packed)]
-pub struct GlobalDescriptorTable([Entry; 8]);
+#[derive(Debug, Clone, Hash)]
+#[repr(C)]
+pub struct GlobalDescriptorTable(ArrayVec<Entry, 8>);
 
 impl GlobalDescriptorTable {
     pub fn new() -> Self {
-        Self([Entry::zero(); 8])
+        let mut gdt = ArrayVec::new_const();
+        gdt.push(Entry::zero()); // push one null entry
+        Self(gdt)
     }
 
-    pub fn set_entry(&mut self, index: u8, entry: Entry) -> SegmentSelector {
-        self.0[index as usize] = entry;
+    pub fn push(&mut self, entry: Entry) -> SegmentSelector {
+        let index = self.0.len();
+        self.0.push(entry);
         // TODO support more then just ring0
         SegmentSelector::new(index as u16, PrivilegeLevel::Ring0)
     }
 
     fn pointer(&self) -> DescriptorTablePointer {
         use core::mem::size_of;
+        let size = self.0.deref().len();
         DescriptorTablePointer {
             base: self.0.as_ptr() as u64,
-            limit: (size_of::<Self>() - 1) as u16,
+            limit: ((size_of::<Self>() * size) - 1) as u16,
         }
     }
 
@@ -254,7 +260,7 @@ mod tests {
     /// Make sure the gdt struct is getting correctly packed
     #[test_case]
     fn gdt_struct_size() {
-        assert_eq!(size_of::<GlobalDescriptorTable>(), 8 * 8);
+        assert_eq!(size_of::<Entry>() * 8, 8 * 8);
     }
 
     /// Linux defaults
