@@ -17,6 +17,13 @@ mod address;
 mod interrupts;
 mod io;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum QemuExitCode {
+    Success = 0x10,
+    Failed = 0x11,
+}
+
 /// Kernel entry point
 #[no_mangle]
 pub extern "C" fn kmain() -> ! {
@@ -70,13 +77,12 @@ extern "C" fn abort() -> ! {
 #[no_mangle]
 #[cfg(test)]
 extern "C" fn abort() -> ! {
-    use io::port::QemuExitCode;
     exit_qemu(QemuExitCode::Failed as u32);
     interrupts::halt_loop();
 }
 
 pub fn exit_qemu(exit_code: u32) {
-    use io::port::Port;
+    use port::Port;
     unsafe {
         let mut port = Port::new(0xf4);
         port.write(exit_code as u32);
@@ -85,7 +91,6 @@ pub fn exit_qemu(exit_code: u32) {
 
 #[cfg(test)]
 fn test_runner(tests: &[&dyn Testable]) {
-    use io::port::QemuExitCode;
     kernel_println!("Running {} tests", tests.len());
     for test in tests {
         test.run();

@@ -1,5 +1,5 @@
-use super::port::Port;
 use core::fmt;
+use port::Port;
 
 static COM1: u16 = 0x3F8;
 type Register = Port<u8>;

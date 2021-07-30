@@ -11,8 +11,7 @@ use os::{
     interrupts::{
         errors::ExceptionStackFrame, gdt, idt::InterruptDescriptorTable, DOUBLE_FAULT_IST_INDEX,
     },
-    io::port::QemuExitCode,
-    kernel_print,
+    kernel_print, QemuExitCode,
 };
 
 static mut COUNTER: u64 = 0;

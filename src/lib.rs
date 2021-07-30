@@ -16,8 +16,12 @@ pub mod address;
 pub mod interrupts;
 pub mod io;
 
-use core::panic::PanicInfo;
-use io::port::{Port, QemuExitCode};
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum QemuExitCode {
+    Success = 0x10,
+    Failed = 0x11,
+}
 
 /// Defines a run function
 pub trait Testable {
@@ -43,7 +47,7 @@ pub fn test_runner(tests: &[&dyn Testable]) {
     exit_qemu(QemuExitCode::Success);
 }
 
-pub fn test_panic_handler(info: &PanicInfo) -> ! {
+pub fn test_panic_handler(info: &core::panic::PanicInfo) -> ! {
     kernel_println!("[failed]\n");
     kernel_println!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
@@ -62,13 +66,12 @@ pub extern "C" fn kmain() -> ! {
 
 #[cfg(test)]
 #[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
+fn panic(info: &core::panic::PanicInfo) -> ! {
     test_panic_handler(info)
 }
 
 pub fn exit_qemu(exit_code: QemuExitCode) {
-    unsafe {
-        let mut port = Port::new(0xf4);
-        port.write(exit_code as u32);
-    }
+    use port::Port;
+    let mut port = Port::new(0xf4);
+    unsafe { port.write(exit_code as u32) };
 }

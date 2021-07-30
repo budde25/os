@@ -1,6 +1,5 @@
 pub mod keyboard;
 pub mod pic;
-pub mod port;
 pub mod uart;
 pub mod vga;
 

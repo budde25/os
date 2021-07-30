@@ -1,4 +1,4 @@
-use super::port::Port;
+use port::Port;
 pub struct Keyboard {
     port: Port<u8>,
 }

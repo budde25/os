@@ -1,5 +1,5 @@
-use super::port::Port;
 use bitflags::bitflags;
+use port::Port;
 
 pub const PIC_1_OFFSET: u8 = 32;
 
