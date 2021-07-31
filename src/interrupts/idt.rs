@@ -1,5 +1,5 @@
 use super::{DescriptorTablePointer, SegmentSelector};
-use crate::interrupts::errors::{ExceptionStackFrame, SelectorError};
+use crate::interrupts::errors::{ExceptionStackFrame, PageFaultErrorCode, SelectorError};
 use bit_field::BitField;
 use bitflags::bitflags;
 use core::usize;
@@ -14,6 +14,8 @@ pub type HandlerFunc = extern "x86-interrupt" fn(_: ExceptionStackFrame);
 pub type HandlerFuncErrorCode = extern "x86-interrupt" fn(_: ExceptionStackFrame, _: u64);
 pub type SegmentNotPresentHandlerFunc =
     extern "x86-interrupt" fn(_: ExceptionStackFrame, _: SelectorError);
+pub type PageFaultHandlerFunc =
+    extern "x86-interrupt" fn(_: ExceptionStackFrame, _: PageFaultErrorCode);
 pub type DivergingHandlerFuncErrorCode =
     extern "x86-interrupt" fn(_: ExceptionStackFrame, _: u64) -> !;
 pub type DivergingHandlerFunc = extern "x86-interrupt" fn(_: ExceptionStackFrame) -> !;
@@ -42,7 +44,7 @@ pub struct InterruptDescriptorTable {
     pub segment_not_present: Entry<SegmentNotPresentHandlerFunc>,
     pub stack_segment_fault: Entry<HandlerFuncErrorCode>,
     pub general_protection_fault: Entry<HandlerFuncErrorCode>,
-    pub page_fault: Entry<HandlerFuncErrorCode>,
+    pub page_fault: Entry<PageFaultHandlerFunc>,
     reserved_1: Entry<HandlerFunc>,
     pub x87_floating_point: Entry<HandlerFunc>,
     pub alignment_check: Entry<HandlerFuncErrorCode>,
@@ -160,7 +162,7 @@ macro_rules! impl_set_handler {
 impl_set_handler!(HandlerFunc);
 impl_set_handler!(HandlerFuncErrorCode);
 impl_set_handler!(SegmentNotPresentHandlerFunc);
-//impl_set_handler!(PageFaultHandlerFunc);
+impl_set_handler!(PageFaultHandlerFunc);
 impl_set_handler!(DivergingHandlerFunc);
 impl_set_handler!(DivergingHandlerFuncErrorCode);
 
@@ -226,14 +228,18 @@ impl Default for Options {
 #[repr(u8)]
 pub enum InterruptIndex {
     Timer = 0,
-    Keyboard,
+    Keyboard = 1,
+    Error = 19,
+    Spurious = 31,
 }
 
 impl From<usize> for InterruptIndex {
     fn from(num: usize) -> Self {
         match num {
-            0 => InterruptIndex::Timer,
-            1 => InterruptIndex::Keyboard,
+            0 => Self::Timer,
+            1 => Self::Keyboard,
+            19 => Self::Error,
+            31 => Self::Spurious,
             _ => unreachable!(),
         }
     }
@@ -253,7 +259,10 @@ impl From<u8> for InterruptIndex {
 
 pub mod handlers {
     use super::InterruptIndex;
-    use crate::interrupts::errors::{ExceptionStackFrame, SelectorError};
+    use crate::interrupts::{
+        errors::{ExceptionStackFrame, PageFaultErrorCode, SelectorError},
+        halt_loop,
+    };
     use crate::kernel_println;
 
     /// 1
@@ -350,12 +359,17 @@ pub mod handlers {
     }
 
     /// 14
-    pub extern "x86-interrupt" fn page_fault(stack_frame: ExceptionStackFrame, error_code: u64) {
-        kernel_println!(
-            "EXCEPTION: PAGE FAULT\n{:#?}\nError Code: {}",
-            stack_frame,
-            error_code
-        );
+    pub extern "x86-interrupt" fn page_fault(
+        stack_frame: ExceptionStackFrame,
+        error_code: PageFaultErrorCode,
+    ) {
+        use crate::arch::x86_64::registers::Cr2;
+
+        kernel_println!("EXCEPTION: PAGE FAULT");
+        kernel_println!("Accessed Address: {:?}", Cr2::read());
+        kernel_println!("Error Code: {:?}", error_code);
+        kernel_println!("{:#?}", stack_frame);
+        halt_loop();
     }
 
     /// 15

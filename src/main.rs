@@ -6,6 +6,7 @@
 #![feature(lang_items)]
 #![feature(custom_test_frameworks)]
 #![feature(abi_x86_interrupt)]
+#![feature(alloc_error_handler)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![allow(dead_code)]
@@ -13,9 +14,14 @@
 global_asm!(include_str!("arch/x86_64/boot_32.s"));
 global_asm!(include_str!("arch/x86_64/boot_64.s"));
 
+extern crate alloc;
+
 mod address;
+mod allocator;
+mod arch;
 mod interrupts;
 mod io;
+mod tables;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -34,8 +40,11 @@ pub extern "C" fn kmain() -> ! {
     // Remap and disable the pic
     io::pic_init();
 
-    kernel_println!("Before Interrupt");
+    // enable heap, requires page table
+    // allocator::init();
 
+    // enable interrupts
+    kernel_println!("Before Interrupt");
     interrupts::enable_interrupts();
 
     #[cfg(test)]
@@ -111,4 +120,9 @@ where
         self();
         kernel_println!("[ok]");
     }
+}
+
+#[alloc_error_handler]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
 }

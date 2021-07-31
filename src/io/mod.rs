@@ -1,4 +1,6 @@
+pub mod ioapic;
 pub mod keyboard;
+pub mod lapic;
 pub mod pic;
 pub mod uart;
 pub mod vga;
@@ -9,6 +11,8 @@ use pic::Pic;
 use spin::Mutex;
 use uart::Uart;
 use vga::Vga;
+
+pub const IRQ_0: u8 = 32;
 
 lazy_static! {
     static ref VGA: Mutex<Vga> = {
