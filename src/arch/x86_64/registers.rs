@@ -1,4 +1,5 @@
 use crate::address::virt::VirtualAddress;
+use bitflags::bitflags;
 
 #[derive(Debug)]
 pub struct Cr2;

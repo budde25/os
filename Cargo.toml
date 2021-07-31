@@ -14,6 +14,7 @@ volatile = "0.4.4"
 
 # local libs
 port = { path = "lib/port" }
+block-alloc = { git = "ssh://git@github.com/budde25/alloc.git" }
 
 [profile.dev]
 lto = false

@@ -259,7 +259,10 @@ impl From<u8> for InterruptIndex {
 
 pub mod handlers {
     use super::InterruptIndex;
-    use crate::interrupts::errors::{ExceptionStackFrame, PageFaultErrorCode, SelectorError};
+    use crate::interrupts::{
+        errors::{ExceptionStackFrame, PageFaultErrorCode, SelectorError},
+        halt_loop,
+    };
     use crate::kernel_println;
 
     /// 1
@@ -366,6 +369,7 @@ pub mod handlers {
         kernel_println!("Accessed Address: {:?}", Cr2::read());
         kernel_println!("Error Code: {:?}", error_code);
         kernel_println!("{:#?}", stack_frame);
+        halt_loop();
     }
 
     /// 15

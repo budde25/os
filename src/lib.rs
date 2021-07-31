@@ -7,12 +7,16 @@
 #![feature(asm)]
 #![feature(global_asm)]
 #![feature(abi_x86_interrupt)]
+#![feature(alloc_error_handler)]
 
 global_asm!(include_str!("arch/x86_64/boot_32.s"));
 global_asm!(include_str!("arch/x86_64/boot_64.s"));
 
+extern crate alloc;
+
 // pub so we can use them in integration tests
 pub mod address;
+pub mod allocator;
 pub mod arch;
 pub mod interrupts;
 pub mod io;
@@ -76,4 +80,9 @@ pub fn exit_qemu(exit_code: QemuExitCode) {
     use port::Port;
     let mut port = Port::new(0xf4);
     unsafe { port.write(exit_code as u32) };
+}
+
+#[alloc_error_handler]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
 }
