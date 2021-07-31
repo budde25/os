@@ -13,8 +13,10 @@ global_asm!(include_str!("arch/x86_64/boot_64.s"));
 
 // pub so we can use them in integration tests
 pub mod address;
+pub mod arch;
 pub mod interrupts;
 pub mod io;
+pub mod tables;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]

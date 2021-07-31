@@ -1,0 +1,2 @@
+mod madt;
+mod rsdp;

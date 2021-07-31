@@ -14,8 +14,10 @@ global_asm!(include_str!("arch/x86_64/boot_32.s"));
 global_asm!(include_str!("arch/x86_64/boot_64.s"));
 
 mod address;
+mod arch;
 mod interrupts;
 mod io;
+mod tables;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]

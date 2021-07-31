@@ -56,7 +56,7 @@ impl Lapic {
     pub fn init(&mut self) {
         use crate::interrupts::idt::InterruptIndex;
         use InterruptCommand as ICR;
-        use Register::*;
+        use Register as Reg;
 
         let irq0 = crate::io::IRQ_0;
 
@@ -65,7 +65,7 @@ impl Lapic {
         // Enable local APIC, set spurious interrupt vector
         let spurious_irq = InterruptIndex::Spurious as u8;
         self.write(
-            SpuriousInterruptVector,
+            Reg::SpuriousInterruptVector,
             0x100 | (irq0 + spurious_irq) as u32,
         );
 
@@ -73,24 +73,24 @@ impl Lapic {
         let timer_irq = InterruptIndex::Timer as u8;
         let x1 = 0xb;
         let periodic = 0x20000;
-        self.write(TimerDivideConfiguration, x1);
-        self.write(Timer, periodic | (irq0 + timer_irq) as u32);
-        self.write(TimerInitialCount, 10_000_000);
+        self.write(Reg::TimerDivideConfiguration, x1);
+        self.write(Reg::Timer, periodic | (irq0 + timer_irq) as u32);
+        self.write(Reg::TimerInitialCount, 10_000_000);
 
         // Disable logical interrupt lines
         let masked = 0x10000;
-        self.write(Lint(0), masked);
-        self.write(Lint(1), masked);
+        self.write(Reg::Lint(0), masked);
+        self.write(Reg::Lint(1), masked);
 
         // Disable performance counter overflow interrupts
         // on machines that proved that interrupt entry
-        if (self.read(Version) >> 16 & 0xFF) >= 4 {
-            self.write(PerformanceMonitoring, masked)
+        if (self.read(Reg::Version) >> 16 & 0xFF) >= 4 {
+            self.write(Reg::PerformanceMonitoring, masked)
         }
 
         // map error interrupt
         let error_irq = InterruptIndex::Error as u8;
-        self.write(Error, (irq0 + error_irq) as u32);
+        self.write(Reg::Error, (irq0 + error_irq) as u32);
 
         // TODO clear the error status register
 
@@ -98,31 +98,35 @@ impl Lapic {
         self.end_of_interrupt();
 
         // Send an init level de assert to synchronize arbitration id
-        self.write(InterruptCommand(1), 0);
+        self.write(Reg::InterruptCommand(1), 0);
         self.write(
-            InterruptCommand(0),
+            Reg::InterruptCommand(0),
             ICR::BCAST.bits | ICR::INIT.bits | ICR::LEVEL.bits,
         );
-        while self.read(InterruptCommand(0)) & ICR::DELIVS.bits != 0 {}
+        while self.read(Reg::InterruptCommand(0)) & ICR::DELIVS.bits != 0 {}
 
         // Enable interrupt on the APIC (but not the processor)
-        self.write(TaskPriority, 0);
+        self.write(Reg::TaskPriority, 0);
     }
 
+    /// Write to a register
     fn write(&mut self, index: Register, value: u32) {
         self.0.map_mut(|x| x.index_mut(index)).write(value.into());
         // wait for write to finish, by reading
         self.read(Register::Id);
     }
 
+    /// Read from a register
     fn read(&self, index: Register) -> u32 {
         self.0.map(|x| x.index(index)).read().into()
     }
 
+    // Get the id of the lapic
     fn id(&self) -> u32 {
         self.read(Register::Id) >> 24
     }
 
+    /// call when an interrupt has ended
     fn end_of_interrupt(&mut self) {
         self.write(Register::EndOfInterrupt, 0);
     }
@@ -243,9 +247,9 @@ impl core::convert::From<u32> for Reg {
     }
 }
 
-impl core::convert::Into<u32> for Reg {
-    fn into(self) -> u32 {
-        self.0
+impl core::convert::From<Reg> for u32 {
+    fn from(reg: Reg) -> Self {
+        reg.0
     }
 }
 
