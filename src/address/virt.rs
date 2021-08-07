@@ -1,4 +1,5 @@
 use bit_field::BitField;
+use core::convert::TryFrom;
 use core::fmt::{self, Debug, Formatter};
 
 /// Much of the code in this section is used from Phil's excellent x86_64
@@ -18,7 +19,7 @@ impl VirtualAddress {
         Self::try_new(address).expect("Invalid Virtual Address")
     }
 
-    pub fn try_new(address: u64) -> Result<Self, VirtualAddressInvalid> {
+    fn try_new(address: u64) -> Result<Self, VirtualAddressInvalid> {
         match address.get_bits(47..64) {
             0 | 0x1ffff => Ok(Self(address)),     // address is canonical
             1 => Ok(Self::truncate_new(address)), // address needs sign extension
@@ -28,6 +29,13 @@ impl VirtualAddress {
 
     pub fn truncate_new(address: u64) -> Self {
         Self(((address << 16) as i64 >> 16) as u64)
+    }
+}
+
+impl TryFrom<u64> for VirtualAddress {
+    type Error = VirtualAddressInvalid;
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        Self::try_new(value)
     }
 }
 

@@ -21,6 +21,7 @@ mod allocator;
 mod arch;
 mod interrupts;
 mod io;
+mod paging;
 mod tables;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

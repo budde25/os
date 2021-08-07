@@ -20,6 +20,7 @@ pub mod allocator;
 pub mod arch;
 pub mod interrupts;
 pub mod io;
+pub mod paging;
 pub mod tables;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
