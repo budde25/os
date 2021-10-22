@@ -1,6 +1,6 @@
 [package]
 authors = ["budde25 <ethan@ebudd.io>"]
-edition = "2018"
+edition = "2021"
 name = "os"
 version = "0.1.0"
 
