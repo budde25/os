@@ -42,19 +42,17 @@ enum DescriptorTable {
 }
 
 // needs to be transparent u64, otherwise on LLVM 12 we get "unsupported x86 interrupt prototype"
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
-pub struct SelectorError {
-    flags: u64,
-}
+pub struct SelectorError(u64);
 
 impl SelectorError {
     fn external(&self) -> bool {
-        self.flags.get_bit(0)
+        self.0.get_bit(0)
     }
 
     fn descriptor_table(&self) -> DescriptorTable {
-        match self.flags.get_bits(1..3) {
+        match self.0.get_bits(1..3) {
             0 => DescriptorTable::Gdt,
             1 => DescriptorTable::Idt,
             2 => DescriptorTable::Ldt,
@@ -64,7 +62,7 @@ impl SelectorError {
     }
 
     fn selector_index(&self) -> u64 {
-        self.flags.get_bits(3..16)
+        self.0.get_bits(3..16)
     }
 }
 
