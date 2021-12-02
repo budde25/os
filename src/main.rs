@@ -45,13 +45,13 @@ pub extern "C" fn kmain() -> ! {
     //allocator::init();
 
     // enable interrupts
-    kernel_println!("Before Interrupt");
+    kprintln!("Before Interrupt");
     interrupts::enable_interrupts();
 
     #[cfg(test)]
     test_main();
 
-    kernel_println!("Hello World");
+    kprintln!("Hello World");
 
     interrupts::halt_loop();
 }
@@ -64,16 +64,16 @@ extern "C" fn eh_personality() {
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    kernel_print!("Aborting: ");
+    kprint!("Aborting: ");
     if let Some(p) = info.location() {
-        kernel_println!(
+        kprintln!(
             "line {}, file {}: {}",
             p.line(),
             p.file(),
             info.message().unwrap()
         );
     } else {
-        kernel_println!("no information available.");
+        kprintln!("no information available.");
     }
     abort();
 }
@@ -101,7 +101,7 @@ pub fn exit_qemu(exit_code: u32) {
 
 #[cfg(test)]
 fn test_runner(tests: &[&dyn Testable]) {
-    kernel_println!("Running {} tests", tests.len());
+    kprintln!("Running {} tests", tests.len());
     for test in tests {
         test.run();
     }
@@ -117,9 +117,9 @@ where
     T: Fn(),
 {
     fn run(&self) {
-        kernel_print!("{}...\t", core::any::type_name::<T>());
+        kprint!("{}...\t", core::any::type_name::<T>());
         self();
-        kernel_println!("[ok]");
+        kprintln!("[ok]");
     }
 }
 

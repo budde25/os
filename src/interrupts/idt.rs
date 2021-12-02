@@ -263,46 +263,46 @@ pub mod handlers {
         errors::{ExceptionStackFrame, PageFaultErrorCode, SelectorError},
         halt_loop,
     };
-    use crate::kernel_println;
+    use crate::kprintln;
 
     /// 1
     pub extern "x86-interrupt" fn divide_by_zero(stack_frame: ExceptionStackFrame) {
-        kernel_println!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame);
+        kprintln!("EXCEPTION: DIVIDE BY ZERO\n{:#?}", stack_frame);
     }
 
     /// 2
     pub extern "x86-interrupt" fn debug(stack_frame: ExceptionStackFrame) {
-        kernel_println!("EXCEPTION: DEBUG\n{:#?}", stack_frame);
+        kprintln!("EXCEPTION: DEBUG\n{:#?}", stack_frame);
     }
 
     /// 3
     pub extern "x86-interrupt" fn non_maskable_interrupt(stack_frame: ExceptionStackFrame) {
-        kernel_println!("EXCEPTION: NON MASKABLE INTERRUPT\n{:#?}", stack_frame);
+        kprintln!("EXCEPTION: NON MASKABLE INTERRUPT\n{:#?}", stack_frame);
     }
 
     /// 4
     pub extern "x86-interrupt" fn breakpoint(stack_frame: ExceptionStackFrame) {
-        kernel_println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+        kprintln!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
     }
 
     /// 5
     pub extern "x86-interrupt" fn overflow(stack_frame: ExceptionStackFrame) {
-        kernel_println!("EXCEPTION: OVERFLOW\n{:#?}", stack_frame);
+        kprintln!("EXCEPTION: OVERFLOW\n{:#?}", stack_frame);
     }
 
     /// 6
     pub extern "x86-interrupt" fn bound_range_exceeded(stack_frame: ExceptionStackFrame) {
-        kernel_println!("EXCEPTION: BOUND RANGE EXCEEDED\n{:#?}", stack_frame);
+        kprintln!("EXCEPTION: BOUND RANGE EXCEEDED\n{:#?}", stack_frame);
     }
 
     /// 7
     pub extern "x86-interrupt" fn invalid_opcode(stack_frame: ExceptionStackFrame) {
-        kernel_println!("EXCEPTION: INVALID_OPCODE\n{:#?}", stack_frame);
+        kprintln!("EXCEPTION: INVALID_OPCODE\n{:#?}", stack_frame);
     }
 
     /// 8
     pub extern "x86-interrupt" fn device_not_available(stack_frame: ExceptionStackFrame) {
-        kernel_println!("EXCEPTION: DEVICE NOT AVAILABLE\n{:#?}", stack_frame);
+        kprintln!("EXCEPTION: DEVICE NOT AVAILABLE\n{:#?}", stack_frame);
     }
 
     /// 9
@@ -315,7 +315,7 @@ pub mod handlers {
 
     /// 10
     pub extern "x86-interrupt" fn invalid_tss(stack_frame: ExceptionStackFrame, error_code: u64) {
-        kernel_println!(
+        kprintln!(
             "EXCEPTION: INVALID_TSS\n{:#?}\nError Code: {}",
             stack_frame,
             error_code
@@ -327,7 +327,7 @@ pub mod handlers {
         stack_frame: ExceptionStackFrame,
         error_code: SelectorError,
     ) {
-        kernel_println!(
+        kprintln!(
             "EXCEPTION: SEGMENT_NOT_PRESENT\n{:#?}\n{:#?}",
             stack_frame,
             error_code
@@ -339,7 +339,7 @@ pub mod handlers {
         stack_frame: ExceptionStackFrame,
         error_code: u64,
     ) {
-        kernel_println!(
+        kprintln!(
             "EXCEPTION: STACK SEGMENT FAULT\n{:#?}\nError Code: {}",
             stack_frame,
             error_code
@@ -351,7 +351,7 @@ pub mod handlers {
         stack_frame: ExceptionStackFrame,
         error_code: u64,
     ) {
-        kernel_println!(
+        kprintln!(
             "EXCEPTION: GENERAL PROTECTION FAULT\n{:#?}\nError Code: {}",
             stack_frame,
             error_code
@@ -365,16 +365,16 @@ pub mod handlers {
     ) {
         use crate::arch::x86_64::registers::Cr2;
 
-        kernel_println!("EXCEPTION: PAGE FAULT");
-        kernel_println!("Accessed Address: {:?}", Cr2::read());
-        kernel_println!("Error Code: {:?}", error_code);
-        kernel_println!("{:#?}", stack_frame);
+        kprintln!("EXCEPTION: PAGE FAULT");
+        kprintln!("Accessed Address: {:?}", Cr2::read());
+        kprintln!("Error Code: {:?}", error_code);
+        kprintln!("{:#?}", stack_frame);
         halt_loop();
     }
 
     /// 15
     pub extern "x86-interrupt" fn x87_floating_point(stack_frame: ExceptionStackFrame) {
-        kernel_println!("EXCEPTION: x87 FLOATING POINT\n{:#?}", stack_frame);
+        kprintln!("EXCEPTION: x87 FLOATING POINT\n{:#?}", stack_frame);
     }
 
     /// 16
@@ -382,7 +382,7 @@ pub mod handlers {
         stack_frame: ExceptionStackFrame,
         error_code: u64,
     ) {
-        kernel_println!(
+        kprintln!(
             "EXCEPTION: x87 FLOATING POINT\n{:#?}\nError Code: {}",
             stack_frame,
             error_code
@@ -396,12 +396,12 @@ pub mod handlers {
 
     /// 18
     pub extern "x86-interrupt" fn simd_floating_point(stack_frame: ExceptionStackFrame) {
-        kernel_println!("EXCEPTION: SIMD FLOATING POINT\n{:#?}", stack_frame);
+        kprintln!("EXCEPTION: SIMD FLOATING POINT\n{:#?}", stack_frame);
     }
 
     /// 19
     pub extern "x86-interrupt" fn virtualization(stack_frame: ExceptionStackFrame) {
-        kernel_println!("EXCEPTION: VIRTUALIZATION\n{:#?}", stack_frame);
+        kprintln!("EXCEPTION: VIRTUALIZATION\n{:#?}", stack_frame);
     }
 
     /// 20
@@ -409,7 +409,7 @@ pub mod handlers {
         stack_frame: ExceptionStackFrame,
         error_code: u64,
     ) {
-        kernel_println!(
+        kprintln!(
             "EXCEPTION: VIRTUALIZATION\n{:#?}\nError Code: {}",
             stack_frame,
             error_code
@@ -428,7 +428,7 @@ pub mod handlers {
 
         let keyboard = Keyboard::new();
         if let Some(key) = keyboard.get_key() {
-            crate::kernel_print!("{}", key);
+            crate::kprint!("{}", key);
         }
 
         crate::io::pic_eoi(InterruptIndex::Keyboard.into());

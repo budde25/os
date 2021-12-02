@@ -69,16 +69,16 @@ fn pic_disable() {
 }
 
 #[macro_export]
-macro_rules! kernel_dbg {
+macro_rules! kdbg {
     () => {
-        $crate::kernel_println!("[{}:{}]", file!(), line!());
+        $crate::kprintln!("[{}:{}]", file!(), line!());
     };
     ($val:expr) => {
         // Use of `match` here is intentional because it affects the lifetimes
         // of temporaries - https://stackoverflow.com/a/48732525/1063961
         match $val {
             tmp => {
-                $crate::kernel_println!("[{}:{}] {} = {:#?}",
+                $crate::kprintln!("[{}:{}] {} = {:#?}",
                     file!(), line!(), stringify!($val), &tmp);
                 tmp
             }
@@ -87,21 +87,21 @@ macro_rules! kernel_dbg {
     // Trailing comma with single argument is ignored
     ($val:expr,) => { $crate::kernel_dbg!($val) };
     ($($val:expr),+ $(,)?) => {
-        ($($crate::kernel_dbg!($val)),+,)
+        ($($crate::kdbg!($val)),+,)
     };
 }
 
 /// Print that writes to VGA buffer and Uart
 #[macro_export]
-macro_rules! kernel_print {
+macro_rules! kprint {
     ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
 }
 
 /// Print line that writes to VGA and Uart
 #[macro_export]
-macro_rules! kernel_println {
+macro_rules! kprintln {
     () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::kernel_print!("{}\n", format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::kprint!("{}\n", format_args!($($arg)*)));
 }
 
 #[doc(hidden)]

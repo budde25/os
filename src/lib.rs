@@ -40,14 +40,14 @@ where
     T: Fn(),
 {
     fn run(&self) {
-        kernel_print!("{}...\t", core::any::type_name::<T>());
+        kprint!("{}...\t", core::any::type_name::<T>());
         self();
-        kernel_println!("[ok]");
+        kprintln!("[ok]");
     }
 }
 
 pub fn test_runner(tests: &[&dyn Testable]) {
-    kernel_println!("Running {} tests", tests.len());
+    kprintln!("Running {} tests", tests.len());
     for test in tests {
         test.run();
     }
@@ -55,8 +55,8 @@ pub fn test_runner(tests: &[&dyn Testable]) {
 }
 
 pub fn test_panic_handler(info: &core::panic::PanicInfo) -> ! {
-    kernel_println!("[failed]\n");
-    kernel_println!("Error: {}\n", info);
+    kprintln!("[failed]\n");
+    kprintln!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
     interrupts::halt_loop();
 }
