@@ -16,6 +16,7 @@ pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 
 pub struct Selectors {
     pub kernel_code_segment: SegmentSelector,
+    pub kernel_data_segment: SegmentSelector,
     pub tss_segment: SegmentSelector,
 }
 
@@ -68,10 +69,20 @@ impl SegmentSelector {
         self.0 >> 3
     }
 
+    // gets the code segment index
     fn code_segment() -> Self {
         let segment: u16;
         unsafe {
             asm!("mov {0:x}, cs", out(reg) segment, options(nostack, nomem, preserves_flags));
+        };
+        Self(segment)
+    }
+
+    // gets the data segment index
+    fn data_segment() -> Self {
+        let segment: u16;
+        unsafe {
+            asm!("mov {0:x}, ds", out(reg) segment, options(nostack, nomem, preserves_flags));
         };
         Self(segment)
     }
@@ -131,7 +142,7 @@ lazy_static! {
 
         // initialized to be empty and zero should be null anyway
         let kernel_code_segment = gdt.push(Entry::new(0, Flags::CODE_PL_ZERO));
-        gdt.push(Entry::new(0, Flags::DATA_PL_ZERO));
+        let kernel_data_segment = gdt.push(Entry::new(0, Flags::DATA_PL_ZERO));
         gdt.push(Entry::new(0, Flags::CODE_PL_THREE));
         gdt.push(Entry::new(0, Flags::DATA_PL_THREE));
 
@@ -140,7 +151,7 @@ lazy_static! {
         let tss_segment = gdt.push(tss_segment_1);
         gdt.push(tss_segment_2);
 
-        (gdt, Selectors {kernel_code_segment, tss_segment})
+        (gdt, Selectors {kernel_code_segment, kernel_data_segment, tss_segment})
     };
 
     static ref TSS: TaskStateSegment = {
@@ -187,10 +198,12 @@ pub fn init() {
 
     unsafe {
         gdt::load_cs(GDT.1.kernel_code_segment);
+        gdt::load_ds(GDT.1.kernel_data_segment);
         gdt::load_tss(GDT.1.tss_segment);
     }
 }
 
+// Run a chunk of code without interrupts enabled
 pub fn without_interrupts<F, R>(f: F) -> R
 where
     F: FnOnce() -> R,

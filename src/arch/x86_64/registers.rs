@@ -1,4 +1,5 @@
-use crate::address::virt::VirtualAddress;
+use crate::address::{phys::PhysicalAddress, virt::VirtualAddress};
+use bit_field::BitField;
 use bitflags::bitflags;
 
 bitflags! {
@@ -28,8 +29,14 @@ impl Cr2 {
     }
 }
 
+#[derive(Debug)]
+pub struct Cr3 {
+    address: PhysicalAddress,
+    flags: Cr3Flags,
+}
+
 bitflags! {
-    pub struct Cr3: u64 {
+    pub struct Cr3Flags: u64 {
         const PAGE_LEVEL_WRITE_THROUGH = 1 << 3;
         const PAGE_LEVEL_CACHE_DISABLE = 1 << 4;
     }
@@ -39,7 +46,9 @@ impl Cr3 {
     pub fn read() -> Self {
         let value: u64;
         unsafe { asm!("mov {}, cr3", out(reg) value, options(nomem, nostack, preserves_flags)) };
-        Self::from_bits_truncate(value)
+        let flags = Cr3Flags::from_bits_truncate(value);
+        let address = PhysicalAddress::new(value.get_bits(12..64));
+        Self { address, flags }
     }
 }
 

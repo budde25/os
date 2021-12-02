@@ -67,6 +67,22 @@ pub unsafe fn load_cs(segment: SegmentSelector) {
 /// # Safety
 /// Only load once
 #[inline]
+pub unsafe fn load_ds(segment: SegmentSelector) {
+    asm!(
+        "push {sel}",
+        "lea {tmp}, [1f + rip]",
+        "push {tmp}",
+        "retfq",
+        "1:",
+        sel = in(reg) u64::from(segment.0),
+        tmp = lateout(reg) _,
+        options(preserves_flags),
+    );
+}
+
+/// # Safety
+/// Only load once
+#[inline]
 pub unsafe fn load_tss(segment: SegmentSelector) {
     asm!("ltr {0:x}", in(reg) segment.0, options(nomem, nostack, preserves_flags));
 }
