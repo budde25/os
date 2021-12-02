@@ -198,7 +198,7 @@ pub fn init() {
 
     unsafe {
         gdt::load_cs(GDT.1.kernel_code_segment);
-        gdt::load_ds(GDT.1.kernel_data_segment);
+        // gdt::load_ds(GDT.1.kernel_data_segment);
         gdt::load_tss(GDT.1.tss_segment);
     }
 }

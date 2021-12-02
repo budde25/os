@@ -42,7 +42,7 @@ pub extern "C" fn kmain() -> ! {
     io::pic_init();
 
     // enable heap, requires page table
-    // allocator::init();
+    //allocator::init();
 
     // enable interrupts
     kernel_println!("Before Interrupt");
