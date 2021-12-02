@@ -17,7 +17,7 @@ Working on:
 
 ## Usage
 
-Must have `grub-mkrescue`, `qemu`, `rust`, `cargo-make`, `xorriso`.  
+Must have `grub-mkrescue`, `qemu`, `rust`, `cargo-make`, `xorriso`, `mtools`.  
 Only tested on linux machines.  
 `cargo run` in the root directory will create an iso and run it.  
 `cargo test` will start run unit tests.  
