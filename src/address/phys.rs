@@ -35,7 +35,7 @@ impl TryFrom<u64> for PhysicalAddress {
 
 impl Debug for PhysicalAddress {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("VirtualAddress")
+        f.debug_tuple("PhysicalAddress")
             .field(&format_args!("{:#x}", self.0))
             .finish()
     }
