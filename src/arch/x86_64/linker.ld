@@ -4,33 +4,30 @@ SECTIONS
 {
     /* Conventional starting place */
     . = 1M;
-    .boot :
-    {
-        KEEP(*(.multiboot))
-    }
     
     /* Start with multiboot then .text */
-    .text :
+    .text BLOCK(4K) : ALIGN(4K)
     {
-        *(.boot)
+        *(.multiboot)
         *(.text)
     }
     
     /* Read only data */
-    .rodata :
+    .rodata BLOCK(4K) : ALIGN(4K)
     {
         *(.rodata)
     }
 
     /* Read/Write data */
-    .data :
+    .data BLOCK(4K) : ALIGN(4K) 
     {
         *(.data)
     }
 
     /* Read/Write and stack */
-    .bss :
+    .bss BLOCK(4K) : ALIGN(4K)
     {
+        *(COMMON)
         *(.bss)
     }
 
