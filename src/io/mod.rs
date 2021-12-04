@@ -6,7 +6,7 @@ pub mod uart;
 pub mod vga;
 
 use core::fmt::{Arguments, Write};
-use lapic::Lapic;
+//use lapic::Lapic;
 use lazy_static::lazy_static;
 use pic::Pic;
 use spin::Mutex;
