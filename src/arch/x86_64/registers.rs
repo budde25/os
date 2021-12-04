@@ -47,7 +47,7 @@ impl Cr3 {
         let value: u64;
         unsafe { asm!("mov {}, cr3", out(reg) value, options(nomem, nostack, preserves_flags)) };
         let flags = Cr3Flags::from_bits_truncate(value);
-        let address = PhysicalAddress::new(value.get_bits(12..64));
+        let address = PhysicalAddress::new(value & 0x_000f_ffff_ffff_f000);
         Self { address, flags }
     }
 }

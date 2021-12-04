@@ -3,7 +3,7 @@
 .set MAGIC, 0xE85250D6
 .set VGA, 0xB8000
 
-.section .multiboot, "awx"
+.section .multiboot
 .align 4
 multiboot_start:
     .long MAGIC # Magic multiboot 2
