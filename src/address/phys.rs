@@ -3,6 +3,8 @@ use core::convert::TryFrom;
 use core::fmt::{self, Debug, Formatter};
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
+use super::{align_down, align_up};
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PhysicalAddress(u64);
 
@@ -25,6 +27,31 @@ impl PhysicalAddress {
 
     pub fn truncate_new(address: u64) -> Self {
         Self(address % (1 << 52))
+    }
+
+    pub fn is_null(self) -> bool {
+        self.0 == 0
+    }
+
+    pub fn align_down<U>(self, align: U) -> Self
+    where
+        U: Into<u64>,
+    {
+        Self(align_down(self.0, align.into()))
+    }
+
+    pub fn align_up<U>(self, align: U) -> Self
+    where
+        U: Into<u64>,
+    {
+        Self(align_up(self.0, align.into()))
+    }
+
+    pub fn is_aligned<U>(self, align: U) -> bool
+    where
+        U: Into<u64>,
+    {
+        self.align_down(align) == self
     }
 }
 
