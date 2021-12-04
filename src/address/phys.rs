@@ -168,7 +168,40 @@ impl SubAssign<u64> for PhysicalAddress {
 impl Debug for PhysicalAddress {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_tuple("PhysicalAddress")
-            .field(&format_args!("{:#x}", self.0))
+            .field(&format_args!("{:#X}", self))
             .finish()
+    }
+}
+
+impl fmt::Binary for PhysicalAddress {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Binary::fmt(&self.0, f)
+    }
+}
+
+impl fmt::UpperHex for PhysicalAddress {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Binary::fmt(&self.0, f)
+    }
+}
+
+impl fmt::LowerHex for PhysicalAddress {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Binary::fmt(&self.0, f)
+    }
+}
+
+impl From<PhysicalAddress> for u64 {
+    fn from(addr: PhysicalAddress) -> Self {
+        addr.0
+    }
+}
+
+impl From<PhysicalAddress> for usize {
+    fn from(addr: PhysicalAddress) -> Self {
+        addr.0 as usize
     }
 }
