@@ -6,6 +6,7 @@ pub mod uart;
 pub mod vga;
 
 use core::fmt::{Arguments, Write};
+use lapic::Lapic;
 use lazy_static::lazy_static;
 use pic::Pic;
 use spin::Mutex;
@@ -33,11 +34,19 @@ lazy_static! {
         let pic = Pic::pic_2();
         Mutex::new(pic)
     };
+    // static ref LAPIC: Mutex<Lapic> = {
+    //     let lapic = Lapic::default();
+    //     Mutex::new(lapic)
+    // };
 }
 
 pub fn pic_init() {
     pic_remap();
     //pic_disable();
+}
+
+pub fn lapic_init() {
+    // LAPIC.init();
 }
 
 pub fn pic_eoi(index: usize) {
@@ -85,7 +94,7 @@ macro_rules! kdbg {
         }
     };
     // Trailing comma with single argument is ignored
-    ($val:expr,) => { $crate::kernel_dbg!($val) };
+    ($val:expr,) => { $crate::kdbg!($val) };
     ($($val:expr),+ $(,)?) => {
         ($($crate::kdbg!($val)),+,)
     };
