@@ -11,14 +11,14 @@ use os::{
     interrupts::{
         errors::ExceptionStackFrame, gdt, idt::InterruptDescriptorTable, DOUBLE_FAULT_IST_INDEX,
     },
-    kernel_print, QemuExitCode,
+    kprint, QemuExitCode,
 };
 
 static mut COUNTER: u64 = 0;
 
 #[no_mangle] // don't mangle the name of this function
 pub extern "C" fn kmain() -> ! {
-    kernel_print!("stack_overflow::stack_overflow...\t");
+    kprint!("stack_overflow::stack_overflow...\t");
 
     init();
 
@@ -39,7 +39,7 @@ fn stack_overflow() {
         COUNTER += 1;
     }
     // makes a volatile write
-    os::kernel_print!("{}", unsafe { COUNTER });
+    os::kprint!("{}", unsafe { COUNTER });
     stack_overflow(); // for each recursion, the return address is pushed
 }
 
@@ -69,7 +69,7 @@ extern "x86-interrupt" fn test_double_fault_handler(
     _stack_frame: ExceptionStackFrame,
     _error_code: u64,
 ) -> ! {
-    os::kernel_println!("[ok]");
+    os::kprintln!("[ok]");
     exit_qemu(QemuExitCode::Success);
     loop {}
 }
