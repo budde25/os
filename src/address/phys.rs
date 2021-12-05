@@ -6,6 +6,8 @@ use core::ops::{Add, AddAssign, Sub, SubAssign};
 use super::{align_down, align_up};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
+
 pub struct PhysicalAddress(u64);
 
 #[derive(Debug)]
