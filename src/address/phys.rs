@@ -174,21 +174,18 @@ impl Debug for PhysicalAddress {
 }
 
 impl fmt::Binary for PhysicalAddress {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Binary::fmt(&self.0, f)
     }
 }
 
 impl fmt::UpperHex for PhysicalAddress {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::UpperHex::fmt(&self.0, f)
     }
 }
 
 impl fmt::LowerHex for PhysicalAddress {
-    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::LowerHex::fmt(&self.0, f)
     }
