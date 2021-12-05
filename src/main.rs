@@ -38,14 +38,13 @@ pub extern "C" fn kmain() -> ! {
     // ready to start scheduling. The last thing this
     // should do is start the timer.
     interrupts::init();
+    // TODO: enable the lapic
+    io::lapic_init();
     // Remap and disable the pic
     io::pic_init();
-
-    // enable heap, requires page table
-    //allocator::init();
-
+    // enable the heap
+    allocator::init();
     // enable interrupts
-    kprintln!("Before Interrupt");
     interrupts::enable_interrupts();
 
     #[cfg(test)]
