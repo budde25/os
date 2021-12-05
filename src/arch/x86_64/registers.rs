@@ -1,5 +1,5 @@
 use crate::address::{phys::PhysicalAddress, virt::VirtualAddress};
-use bit_field::BitField;
+use crate::paging::phys_frame::PhysFrame;
 use bitflags::bitflags;
 
 bitflags! {
@@ -31,7 +31,7 @@ impl Cr2 {
 
 #[derive(Debug)]
 pub struct Cr3 {
-    address: PhysicalAddress,
+    frame: PhysFrame,
     flags: Cr3Flags,
 }
 
@@ -48,7 +48,12 @@ impl Cr3 {
         unsafe { asm!("mov {}, cr3", out(reg) value, options(nomem, nostack, preserves_flags)) };
         let flags = Cr3Flags::from_bits_truncate(value);
         let address = PhysicalAddress::new(value & 0x_000f_ffff_ffff_f000);
-        Self { address, flags }
+        let frame = PhysFrame::containing_address(address);
+        Self { frame, flags }
+    }
+
+    pub fn frame(&self) -> PhysFrame {
+        self.frame
     }
 }
 
