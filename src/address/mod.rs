@@ -1,4 +1,5 @@
 pub mod phys;
+pub mod sections;
 pub mod virt;
 
 pub const fn align_down(addr: u64, align: u64) -> u64 {

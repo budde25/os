@@ -1,3 +1,5 @@
+use super::sections::Section;
+use super::virt::VirtualAddress;
 use bit_field::BitField;
 use core::convert::TryFrom;
 use core::fmt::{self, Debug, Formatter};
@@ -55,6 +57,10 @@ impl PhysicalAddress {
     {
         self.align_down(align) == self
     }
+
+    pub fn section(&self) -> Section {
+        Section::containing_adrress(&self)
+    }
 }
 
 impl TryFrom<u64> for PhysicalAddress {
@@ -68,6 +74,13 @@ impl TryFrom<usize> for PhysicalAddress {
     type Error = PhysicalAddressInvalid;
     fn try_from(value: usize) -> Result<Self, Self::Error> {
         Self::try_new(value as u64)
+    }
+}
+
+impl From<VirtualAddress> for PhysicalAddress {
+    fn from(value: VirtualAddress) -> Self {
+        use crate::consts::KERNEL_OFFSET;
+        Self::new((usize::from(value) + KERNEL_OFFSET) as u64)
     }
 }
 
@@ -169,8 +182,9 @@ impl SubAssign<u64> for PhysicalAddress {
 
 impl Debug for PhysicalAddress {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("PhysicalAddress")
-            .field(&format_args!("{:#X}", self))
+        f.debug_struct("PhysicalAddress")
+            .field("address", &format_args!("{:#X}", self))
+            .field("section", &self.section())
             .finish()
     }
 }

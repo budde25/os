@@ -1,4 +1,4 @@
-use super::{align_down, align_up};
+use super::{align_down, align_up, phys::PhysicalAddress};
 use crate::paging::page_table::{PageOffset, PageTableIndex};
 use bit_field::BitField;
 use core::convert::{From, TryFrom};
@@ -96,6 +96,13 @@ impl TryFrom<u64> for VirtualAddress {
     type Error = VirtualAddressInvalid;
     fn try_from(value: u64) -> Result<Self, Self::Error> {
         Self::try_new(value)
+    }
+}
+
+impl From<PhysicalAddress> for VirtualAddress {
+    fn from(value: PhysicalAddress) -> Self {
+        use crate::consts::KERNEL_OFFSET;
+        Self::new((usize::from(value) - KERNEL_OFFSET) as u64)
     }
 }
 
