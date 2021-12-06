@@ -31,12 +31,11 @@ impl Debug for SectionRange {
     }
 }
 
-#[derive(Debug)]
 pub enum Section {
-    TEXT,
-    RODATA,
-    DATA,
-    BSS,
+    TEXT(SectionRange),
+    RODATA(SectionRange),
+    DATA(SectionRange),
+    BSS(SectionRange),
     UNKNOWN,
 }
 
@@ -64,15 +63,37 @@ impl Section {
 
         let pau = u64::from(*pa);
         if pau >= text_start && pau < text_end {
-            Section::TEXT
+            Section::TEXT(SectionRange::new(text_start, text_end))
         } else if pau >= rodata_start && pau < rodata_end {
-            Section::RODATA
+            Section::RODATA(SectionRange::new(rodata_start, rodata_end))
         } else if pau >= data_start && pau < data_end {
-            Section::DATA
+            Section::DATA(SectionRange::new(data_start, data_end))
         } else if pau >= bss_start && pau < bss_end {
-            Section::BSS
+            Section::RODATA(SectionRange::new(bss_start, bss_end))
         } else {
             Section::UNKNOWN
+        }
+    }
+
+    fn section_range(&self) -> Option<&SectionRange> {
+        match self {
+            Self::TEXT(s) => Some(s),
+            Self::RODATA(s) => Some(s),
+            Self::DATA(s) => Some(s),
+            Self::BSS(s) => Some(s),
+            Self::UNKNOWN => None,
+        }
+    }
+}
+
+impl Debug for Section {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            Self::TEXT(_) => write!(f, "TEXT"),
+            Self::RODATA(_) => write!(f, "RODATA"),
+            Self::DATA(_) => write!(f, "DATA"),
+            Self::BSS(_) => write!(f, "BSS"),
+            Self::UNKNOWN => write!(f, "UNKNOWN"),
         }
     }
 }
