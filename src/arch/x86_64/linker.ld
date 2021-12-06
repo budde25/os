@@ -9,25 +9,34 @@ SECTIONS
     .text : ALIGN(4K)
     {
         *(.multiboot)
-        *(.text)
+        *(.text*)
     }
     
     /* Read only data */
     .rodata : ALIGN(4K)
     {
-        *(.rodata)
+        *(.rodata*)
     }
 
     /* Read/Write data */
     .data : ALIGN(4K) 
     {
-        *(.data)
+        *(.data*)
     }
 
     /* Read/Write and stack */
     .bss : ALIGN(4K)
     {
         *(COMMON)
-        *(.bss)
+        *(.bss*)
     }
+
+    /DISCARD/ : {
+        *(.comment*)
+        *(.eh_frame*)
+        *(.gcc_except_table*)
+        *(.note*)
+        *(.rel.eh_frame*)
+    }
+
 }
