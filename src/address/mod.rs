@@ -1,3 +1,6 @@
+use lazy_static::lazy_static;
+use sections::Sections;
+
 pub mod phys;
 pub mod sections;
 pub mod virt;
@@ -15,4 +18,8 @@ pub const fn align_up(addr: u64, align: u64) -> u64 {
     } else {
         (addr | align_mask) + 1
     }
+}
+
+lazy_static! {
+    static ref SECTIONS: Sections = Sections::new();
 }

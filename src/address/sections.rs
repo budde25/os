@@ -1,46 +1,19 @@
 use crate::address::phys::PhysicalAddress;
-use core::fmt::{self, Debug};
+use core::{
+    fmt::{self, Debug},
+    ops::Index,
+};
 
-pub struct SectionRange {
-    start: PhysicalAddress, // inclusive
-    end: PhysicalAddress,   // exclusive
+#[derive(Debug)]
+pub struct Sections {
+    text: SectionRange,
+    rodata: SectionRange,
+    data: SectionRange,
+    bss: SectionRange,
 }
 
-impl SectionRange {
-    fn new(start: u64, end: u64) -> Self {
-        Self {
-            start: PhysicalAddress::new(start),
-            end: PhysicalAddress::new(end),
-        }
-    }
-}
-
-impl Debug for SectionRange {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        struct Hex(u64);
-        impl Debug for Hex {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                write!(f, "{:X}", self.0)
-            }
-        }
-
-        f.debug_struct("SectionRange")
-            .field("start", &Hex(u64::from(self.start)))
-            .field("end", &Hex(u64::from(self.end)))
-            .finish()
-    }
-}
-
-pub enum Section {
-    TEXT(SectionRange),
-    RODATA(SectionRange),
-    DATA(SectionRange),
-    BSS(SectionRange),
-    UNKNOWN,
-}
-
-impl Section {
-    pub fn containing_adrress(pa: &PhysicalAddress) -> Self {
+impl Sections {
+    pub fn new() -> Self {
         extern "C" {
             static __text_start: usize;
             static __text_end: usize;
@@ -61,39 +34,77 @@ impl Section {
         let bss_start = unsafe { &__bss_start as *const _ as u64 };
         let bss_end = unsafe { &__bss_end as *const _ as u64 };
 
-        let pau = u64::from(*pa);
-        if pau >= text_start && pau < text_end {
-            Section::TEXT(SectionRange::new(text_start, text_end))
-        } else if pau >= rodata_start && pau < rodata_end {
-            Section::RODATA(SectionRange::new(rodata_start, rodata_end))
-        } else if pau >= data_start && pau < data_end {
-            Section::DATA(SectionRange::new(data_start, data_end))
-        } else if pau >= bss_start && pau < bss_end {
-            Section::RODATA(SectionRange::new(bss_start, bss_end))
+        Self {
+            text: SectionRange::new(text_start, text_end),
+            rodata: SectionRange::new(rodata_start, rodata_end),
+            data: SectionRange::new(data_start, data_end),
+            bss: SectionRange::new(bss_start, bss_end),
+        }
+    }
+
+    pub fn containing_adrress(&self, pa: &PhysicalAddress) -> Section {
+        if pa >= &self.text.start && pa < &self.text.end {
+            Section::TEXT
+        } else if pa >= &self.rodata.start && pa < &self.rodata.end {
+            Section::RODATA
+        } else if pa >= &self.data.start && pa < &self.data.end {
+            Section::DATA
+        } else if pa >= &self.bss.start && pa < &self.bss.end {
+            Section::BSS
         } else {
             Section::UNKNOWN
         }
     }
+}
 
-    fn section_range(&self) -> Option<&SectionRange> {
-        match self {
-            Self::TEXT(s) => Some(s),
-            Self::RODATA(s) => Some(s),
-            Self::DATA(s) => Some(s),
-            Self::BSS(s) => Some(s),
-            Self::UNKNOWN => None,
+impl Index<Section> for Sections {
+    type Output = SectionRange;
+    fn index(&self, index: Section) -> &Self::Output {
+        match index {
+            Section::TEXT => &self.text,
+            Section::RODATA => &self.rodata,
+            Section::DATA => &self.data,
+            Section::BSS => &self.bss,
+            Section::UNKNOWN => panic!("Unkown index"),
         }
     }
 }
 
-impl Debug for Section {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            Self::TEXT(_) => write!(f, "TEXT"),
-            Self::RODATA(_) => write!(f, "RODATA"),
-            Self::DATA(_) => write!(f, "DATA"),
-            Self::BSS(_) => write!(f, "BSS"),
-            Self::UNKNOWN => write!(f, "UNKNOWN"),
+pub struct SectionRange {
+    start: PhysicalAddress, // inclusive
+    end: PhysicalAddress,   // exclusive
+}
+
+impl SectionRange {
+    fn new(start: u64, end: u64) -> Self {
+        Self {
+            start: PhysicalAddress::new(start),
+            end: PhysicalAddress::new(end),
         }
     }
+}
+
+impl Debug for SectionRange {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        struct Hex(u64);
+        impl Debug for Hex {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "{:#X}", self.0)
+            }
+        }
+
+        f.debug_struct("SectionRange")
+            .field("start", &Hex(u64::from(self.start)))
+            .field("end", &Hex(u64::from(self.end)))
+            .finish()
+    }
+}
+
+#[derive(Debug)]
+pub enum Section {
+    TEXT,
+    RODATA,
+    DATA,
+    BSS,
+    UNKNOWN,
 }

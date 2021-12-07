@@ -59,7 +59,7 @@ impl PhysicalAddress {
     }
 
     pub fn section(&self) -> Section {
-        Section::containing_adrress(&self)
+        super::SECTIONS.containing_adrress(&self)
     }
 }
 
