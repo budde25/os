@@ -16,10 +16,11 @@ extern crate alloc;
 
 // pub so we can use them in integration tests
 pub mod address;
-pub mod allocator;
 pub mod arch;
+pub mod consts;
 pub mod interrupts;
 pub mod io;
+pub mod memory;
 pub mod paging;
 pub mod tables;
 
@@ -65,6 +66,9 @@ pub fn test_panic_handler(info: &core::panic::PanicInfo) -> ! {
 #[cfg(test)]
 #[no_mangle]
 pub extern "C" fn kmain() -> ! {
+    // Map all of physical memory to addr + kernel offset
+    paging::map_all_physical_memory();
+
     interrupts::init();
     test_main();
 

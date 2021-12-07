@@ -17,10 +17,11 @@ global_asm!(include_str!("arch/x86_64/boot_64.s"));
 extern crate alloc;
 
 mod address;
-mod allocator;
 mod arch;
+mod consts;
 mod interrupts;
 mod io;
+mod memory;
 mod paging;
 mod tables;
 
@@ -37,18 +38,32 @@ pub extern "C" fn kmain() -> ! {
     // Main should initialize all sub-systems and get
     // ready to start scheduling. The last thing this
     // should do is start the timer.
+
+    // Map all of physical memory to addr + kernel offset
+    paging::map_all_physical_memory();
+
     interrupts::init();
     // TODO: enable the lapic
     io::lapic_init();
     // Remap and disable the pic
     io::pic_init();
     // enable the heap
-    allocator::init();
+    memory::heap::init();
     // enable interrupts
     interrupts::enable_interrupts();
 
-    #[cfg(test)]
-    test_main();
+    // let virt = VirtualAddress::new(0xb8000);
+    // let phys: PhysicalAddress = virt.into();
+    // let mut ptr = virt.as_mut_ptr::<u8>();
+    // let mut ptr2 = phys.as_mut_ptr::<u8>();
+    // unsafe {
+    //     for _ in 0..1000 {
+    //         ptr2.write_volatile(u8::MAX);
+    //         ptr.write_volatile(u8::MAX);
+    //         ptr = ptr.sub(8);
+    //         ptr2 = ptr2.sub(8);
+    //     }
+    // }
 
     kprintln!("Hello World");
 

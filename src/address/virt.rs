@@ -26,7 +26,7 @@ impl VirtualAddress {
         match address.get_bits(47..64) {
             0 | 0x1ffff => Ok(Self(address)),     // address is canonical
             1 => Ok(Self::truncate_new(address)), // address needs sign extension
-            other => Err(VirtualAddressInvalid(other)),
+            _ => Err(VirtualAddressInvalid(address)),
         }
     }
 
@@ -57,6 +57,14 @@ impl VirtualAddress {
         U: Into<u64>,
     {
         self.align_down(align) == self
+    }
+
+    pub fn as_ptr<T>(&self) -> *const T {
+        self.0 as *const T
+    }
+
+    pub fn as_mut_ptr<T>(&self) -> *mut T {
+        self.as_ptr::<T>() as *mut T
     }
 
     /// Returns the 12-bit page offset of this virtual address.
@@ -101,8 +109,7 @@ impl TryFrom<u64> for VirtualAddress {
 
 impl From<PhysicalAddress> for VirtualAddress {
     fn from(value: PhysicalAddress) -> Self {
-        use crate::consts::KERNEL_OFFSET;
-        Self::new((usize::from(value) - KERNEL_OFFSET) as u64)
+        Self::new(u64::from(value))
     }
 }
 

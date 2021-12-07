@@ -1,7 +1,10 @@
 use core::fmt;
 
+use crate::address::phys::PhysicalAddress;
+
 const BUFFER_WIDTH: usize = 80; // default 80
 const BUFFER_HEIGHT: usize = 25; // default 25
+const BUFFER_ADDR: PhysicalAddress = PhysicalAddress::truncate_new(0xb8000); // Location of the VGA buffer
 
 /// Hardware text mode color constants.
 #[allow(dead_code)]
@@ -84,7 +87,7 @@ impl Default for Vga {
             column_position: 0,
             color_code: ColorCode::default(),
             // Safety: 0xb8000 is the location of the VGA buffer
-            buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+            buffer: unsafe { &mut *(BUFFER_ADDR.as_mut_ptr::<Buffer>()) },
         }
     }
 }

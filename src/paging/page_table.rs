@@ -1,22 +1,111 @@
 use crate::address::phys::PhysicalAddress;
+use crate::paging::phys_frame::PhysFrame;
 use bitflags::bitflags;
-use core::fmt::{self, Debug};
 use core::ops::{Index, IndexMut};
+use core::{
+    fmt::{self, Debug},
+    marker::PhantomData,
+};
 
 const PAGE_TABLE_ENTRY_COUNT: usize = 512;
 
 pub struct PageTableEntry(u64);
 
 impl PageTableEntry {
-    fn get_physical_addr(&self) -> PhysicalAddress {
+    pub fn new() -> Self {
+        Self(0)
+    }
+
+    pub fn frame(&self) -> Option<PhysFrame> {
+        if self.is_present() {
+            let addr = PhysicalAddress::new(self.0 & 0x000f_ffff_ffff_f000);
+            Some(PhysFrame::containing_address(addr))
+        } else {
+            None
+        }
+    }
+
+    pub fn address(&self) -> PhysicalAddress {
         PhysicalAddress::new(self.0 & 0x000f_ffff_ffff_f000)
+    }
+
+    pub fn set_address(&mut self, addr: PhysicalAddress, flags: PageFlags) {
+        assert!(addr.is_aligned(4096u64));
+        self.0 = (u64::from(addr)) | flags.bits();
+    }
+
+    pub fn set_unused(&mut self) {
+        self.0 = 0;
+    }
+
+    pub fn is_unused(&self) -> bool {
+        self.0 == 0
+    }
+
+    pub fn flags(&self) -> PageFlags {
+        PageFlags::from_bits_truncate(self.0)
+    }
+
+    pub fn set_flags(&mut self, flags: PageFlags) {
+        self.0 &= flags.bits;
+    }
+
+    pub fn is_present(&self) -> bool {
+        let flags = self.flags();
+        flags.contains(PageFlags::PRESENT)
+    }
+
+    pub fn is_writable(&self) -> bool {
+        let flags = self.flags();
+        flags.contains(PageFlags::WRITEABLE)
+    }
+
+    pub fn is_user(&self) -> bool {
+        let flags = self.flags();
+        flags.contains(PageFlags::USER_ACCESSIBLE)
+    }
+
+    pub fn is_write_though_cache(&self) -> bool {
+        let flags = self.flags();
+        flags.contains(PageFlags::WRITE_THROUGH_CACHING)
+    }
+
+    pub fn is_chache_enabled(&self) -> bool {
+        let flags = self.flags();
+        !flags.contains(PageFlags::DISABLE_CACHE)
+    }
+
+    pub fn is_accessed(&self) -> bool {
+        let flags = self.flags();
+        flags.contains(PageFlags::ACCESSED)
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        let flags = self.flags();
+        flags.contains(PageFlags::DIRTY)
+    }
+
+    pub fn is_huge(&self) -> bool {
+        let flags = self.flags();
+        flags.contains(PageFlags::HUGE_PAGE)
+    }
+
+    pub fn is_executable(&self) -> bool {
+        let flags = self.flags();
+        !flags.contains(PageFlags::NO_EXECUTE)
+    }
+}
+
+impl Default for PageTableEntry {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 impl Debug for PageTableEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let flags = PageFlags::from_bits_truncate(self.0);
-        let addr = self.get_physical_addr();
+        let flags = self.flags();
+        let addr = self.frame();
         f.debug_struct("Page")
             .field("Address", &addr)
             .field("Flags", &flags)
@@ -53,23 +142,121 @@ bitflags! {
     }
 }
 
-#[derive(Debug)]
-#[repr(align(4096))]
-#[repr(C)]
-pub struct PageTable {
-    entries: [PageTableEntry; PAGE_TABLE_ENTRY_COUNT],
+pub trait HierarchicalLevel: TableLevel {
+    type NextLevel: TableLevel;
 }
 
-impl Index<usize> for PageTable {
+impl HierarchicalLevel for Level4 {
+    type NextLevel = Level3;
+}
+
+impl HierarchicalLevel for Level3 {
+    type NextLevel = Level2;
+}
+
+impl HierarchicalLevel for Level2 {
+    type NextLevel = Level1;
+}
+
+pub trait TableLevel {}
+
+pub enum Level4 {}
+pub enum Level3 {}
+pub enum Level2 {}
+pub enum Level1 {}
+
+impl TableLevel for Level4 {}
+impl TableLevel for Level3 {}
+impl TableLevel for Level2 {}
+impl TableLevel for Level1 {}
+
+#[derive(Debug)]
+#[repr(C, align(4096))]
+pub struct PageTable<L: TableLevel> {
+    entries: [PageTableEntry; PAGE_TABLE_ENTRY_COUNT],
+    _level: PhantomData<L>,
+}
+
+impl<L> PageTable<L>
+where
+    L: TableLevel,
+{
+    pub fn zero(&mut self) {
+        for entry in self.entries.iter_mut() {
+            entry.set_unused()
+        }
+    }
+
+    /// Returns an iterator over the entries of the page table.
+    pub fn iter(&self) -> impl Iterator<Item = &PageTableEntry> {
+        self.entries.iter()
+    }
+
+    /// Returns an iterator that allows modifying the entries of the page table.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut PageTableEntry> {
+        self.entries.iter_mut()
+    }
+}
+
+impl<L> PageTable<L>
+where
+    L: HierarchicalLevel,
+{
+    pub fn next_table(&self, index: usize) -> Option<&PageTable<L::NextLevel>> {
+        self.next_table_address(index)
+            .map(|addr| unsafe { &*(u64::from(addr) as *const _) })
+    }
+
+    pub fn next_table_mut(&self, index: usize) -> Option<&mut PageTable<L::NextLevel>> {
+        self.next_table_address(index)
+            .map(|addr| unsafe { &mut *(u64::from(addr) as *mut _) })
+    }
+
+    pub fn next_table_address(&self, index: usize) -> Option<PhysicalAddress> {
+        let entry = &self[index];
+        if entry.is_huge() || !entry.is_present() {
+            return None;
+        }
+
+        Some(entry.address())
+    }
+}
+
+impl<L> Index<usize> for PageTable<L>
+where
+    L: TableLevel,
+{
     type Output = PageTableEntry;
     fn index(&self, index: usize) -> &Self::Output {
         &self.entries[index]
     }
 }
 
-impl IndexMut<usize> for PageTable {
+impl<L> IndexMut<usize> for PageTable<L>
+where
+    L: TableLevel,
+{
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.entries[index]
+    }
+}
+
+impl<L> Index<PageTableIndex> for PageTable<L>
+where
+    L: TableLevel,
+{
+    type Output = PageTableEntry;
+    fn index(&self, index: PageTableIndex) -> &Self::Output {
+        &self.entries[usize::from(index)]
+    }
+}
+
+impl<L> IndexMut<PageTableIndex> for PageTable<L>
+where
+    L: TableLevel,
+{
+    fn index_mut(&mut self, index: PageTableIndex) -> &mut Self::Output {
+        &mut self.entries[usize::from(index)]
     }
 }
 
@@ -125,7 +312,7 @@ impl PageOffset {
 
     /// Creates a new index from the given `u16`. Throws away bits if the value is >=4096.
     pub const fn new_truncate(index: u16) -> Self {
-        Self(index % 4096 as u16)
+        Self(index % 4096)
     }
 }
 

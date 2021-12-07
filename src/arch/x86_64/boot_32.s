@@ -27,6 +27,9 @@ p3_table:
 p2_table:
     .skip 4096
 
+.section .page_table_2, "aw"
+.align 4096
+
 .section .bss
 .align 4096
 stack_bottom:

@@ -25,12 +25,21 @@ impl PhysicalAddress {
     fn try_new(address: u64) -> Result<Self, PhysicalAddressInvalid> {
         match address.get_bits(52..64) {
             0 => Ok(Self(address)), // address is valid
-            other => Err(PhysicalAddressInvalid(other)),
+            _ => Err(PhysicalAddressInvalid(address)),
         }
     }
 
-    pub fn truncate_new(address: u64) -> Self {
+    pub const fn truncate_new(address: u64) -> Self {
         Self(address % (1 << 52))
+    }
+
+    pub const fn as_ptr<T>(&self) -> *const T {
+        use crate::consts::KERNEL_OFFSET;
+        (self.0 + KERNEL_OFFSET as u64) as *const T
+    }
+
+    pub fn as_mut_ptr<T>(&self) -> *mut T {
+        self.as_ptr::<T>() as *mut T
     }
 
     pub fn is_null(self) -> bool {
@@ -59,7 +68,7 @@ impl PhysicalAddress {
     }
 
     pub fn section(&self) -> Section {
-        super::SECTIONS.containing_adrress(&self)
+        super::SECTIONS.containing_address(self)
     }
 }
 
@@ -79,8 +88,7 @@ impl TryFrom<usize> for PhysicalAddress {
 
 impl From<VirtualAddress> for PhysicalAddress {
     fn from(value: VirtualAddress) -> Self {
-        use crate::consts::KERNEL_OFFSET;
-        Self::new((usize::from(value) + KERNEL_OFFSET) as u64)
+        Self::new(u64::from(value))
     }
 }
 
