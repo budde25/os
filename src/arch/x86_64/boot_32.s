@@ -18,7 +18,7 @@ multiboot_start:
     .long 0x00000008 # Size
 multiboot_end:
 
-.section .bss
+.section .page_table, "aw"
 .align 4096
 p4_table:
     .skip 4096
@@ -26,6 +26,9 @@ p3_table:
     .skip 4096
 p2_table:
     .skip 4096
+
+.section .bss
+.align 4096
 stack_bottom:
     .skip 16384 # 16 Kib
 stack_top:

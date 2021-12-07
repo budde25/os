@@ -10,6 +10,7 @@ pub struct Sections {
     rodata: SectionRange,
     data: SectionRange,
     bss: SectionRange,
+    page_table: SectionRange,
 }
 
 impl Sections {
@@ -23,6 +24,8 @@ impl Sections {
             static __data_end: usize;
             static __bss_start: usize;
             static __bss_end: usize;
+            static __page_table_start: usize;
+            static __page_table_end: usize;
         }
 
         let text_start = unsafe { &__text_start as *const _ as u64 };
@@ -33,26 +36,31 @@ impl Sections {
         let data_end = unsafe { &__data_end as *const _ as u64 };
         let bss_start = unsafe { &__bss_start as *const _ as u64 };
         let bss_end = unsafe { &__bss_end as *const _ as u64 };
+        let page_table_start = unsafe { &__page_table_start as *const _ as u64 };
+        let page_table_end = unsafe { &__page_table_end as *const _ as u64 };
 
         Self {
             text: SectionRange::new(text_start, text_end),
             rodata: SectionRange::new(rodata_start, rodata_end),
             data: SectionRange::new(data_start, data_end),
             bss: SectionRange::new(bss_start, bss_end),
+            page_table: SectionRange::new(page_table_start, page_table_end),
         }
     }
 
     pub fn containing_adrress(&self, pa: &PhysicalAddress) -> Section {
         if pa >= &self.text.start && pa < &self.text.end {
-            Section::TEXT
+            Section::Text
         } else if pa >= &self.rodata.start && pa < &self.rodata.end {
-            Section::RODATA
+            Section::RoData
         } else if pa >= &self.data.start && pa < &self.data.end {
-            Section::DATA
+            Section::Data
         } else if pa >= &self.bss.start && pa < &self.bss.end {
-            Section::BSS
+            Section::Bss
+        } else if pa >= &self.page_table.start && pa < &self.page_table.end {
+            Section::PageTable
         } else {
-            Section::UNKNOWN
+            Section::Unknown
         }
     }
 }
@@ -61,11 +69,12 @@ impl Index<Section> for Sections {
     type Output = SectionRange;
     fn index(&self, index: Section) -> &Self::Output {
         match index {
-            Section::TEXT => &self.text,
-            Section::RODATA => &self.rodata,
-            Section::DATA => &self.data,
-            Section::BSS => &self.bss,
-            Section::UNKNOWN => panic!("Unkown index"),
+            Section::Text => &self.text,
+            Section::RoData => &self.rodata,
+            Section::Data => &self.data,
+            Section::Bss => &self.bss,
+            Section::PageTable => &self.page_table,
+            Section::Unknown => panic!("Unkown index"),
         }
     }
 }
@@ -102,9 +111,10 @@ impl Debug for SectionRange {
 
 #[derive(Debug)]
 pub enum Section {
-    TEXT,
-    RODATA,
-    DATA,
-    BSS,
-    UNKNOWN,
+    Text,
+    RoData,
+    Data,
+    Bss,
+    PageTable,
+    Unknown,
 }
