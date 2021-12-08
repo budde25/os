@@ -86,7 +86,7 @@ impl Pic {
     }
 
     fn pic_type(&self) -> PicType {
-        self.command.get_port().into()
+        self.command.port().into()
     }
 
     fn get_offset(&self) -> u8 {
