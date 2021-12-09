@@ -1,6 +1,6 @@
-use crate::address::phys::PhysicalAddress;
 use crate::tables::rsdp::{RSDPV1, RSDPV2};
-use core::fmt::Debug;
+use crate::{address::phys::PhysicalAddress, kdbg};
+use core::fmt::{self, Debug};
 
 /// A struct for parsing multiboot2 boot info
 #[derive(Debug)]
@@ -229,8 +229,9 @@ impl BootCommandLine {
     pub fn string(&self) -> &'static str {
         let string_offset = 8;
         let ptr = self as *const BootCommandLine as *const u8;
-        let slice =
-            unsafe { core::slice::from_raw_parts(ptr.add(string_offset), self.size as usize - 8) };
+        let slice = unsafe {
+            core::slice::from_raw_parts(ptr.add(string_offset), self.size as usize - 8 - 1)
+        };
         unsafe { core::str::from_utf8_unchecked(slice) }
     }
 }
@@ -255,8 +256,9 @@ impl BootLoaderName {
     pub fn string(&self) -> &'static str {
         let string_offset = 8;
         let ptr = self as *const BootLoaderName as *const u8;
-        let slice =
-            unsafe { core::slice::from_raw_parts(ptr.add(string_offset), self.size as usize - 8) };
+        let slice = unsafe {
+            core::slice::from_raw_parts(ptr.add(string_offset), self.size as usize - 8 - 1)
+        };
         unsafe { core::str::from_utf8_unchecked(slice) }
     }
 }
@@ -285,8 +287,9 @@ impl Modules {
     pub fn string(&self) -> &'static str {
         let string_offset = 16;
         let ptr = self as *const Modules as *const u8;
-        let slice =
-            unsafe { core::slice::from_raw_parts(ptr.add(string_offset), self.size as usize - 8) };
+        let slice = unsafe {
+            core::slice::from_raw_parts(ptr.add(string_offset), self.size as usize - 8 - 1)
+        };
         unsafe { core::str::from_utf8_unchecked(slice) }
     }
 
@@ -461,7 +464,7 @@ impl Debug for FrameBufferInfo {
             .field("height", &self.height())
             .field("bpp", &self.bpp())
             .field("type", &self.framebuffer_type())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -512,17 +515,95 @@ struct Pallet {
     blue_value: u8,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 #[repr(C, packed)]
 pub struct MemoryMap {
     r#type: StructType,
     size: u32,
     entry_size: u32,
     entry_version: u32,
-    entries: [u128; 0], // FIXME allow for data
+    entries: [u8; 0], // slice of entries
+}
+
+impl MemoryMap {
+    // TODO: make sure this is correct
+    fn entries(&self) -> &'static [MemoryMapEntry] {
+        let offset = 16;
+        let entry_count = (self.size - 16) / self.entry_size;
+        let ptr = self as *const MemoryMap as *const u8;
+        let ptr = unsafe { ptr.add(offset) };
+        let ptr = ptr as *const MemoryMapEntry;
+        unsafe { core::slice::from_raw_parts(ptr.add(offset), entry_count as usize) }
+    }
+}
+
+impl Debug for MemoryMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let entry_size = self.entry_size;
+        let entry_version = self.entry_version;
+        f.debug_struct("MemoryMap")
+            .field("entry_size", &entry_size)
+            .field("entry_version", &entry_version)
+            .finish()
+    }
+}
+
+#[derive(Clone, Copy)]
+#[repr(C, packed)]
+pub struct MemoryMapEntry {
+    base_addr: u64,
+    length: u64,
+    r#type: u32,
+    _reserved: u32,
+}
+
+impl MemoryMapEntry {
+    fn address(&self) -> PhysicalAddress {
+        PhysicalAddress::new(self.base_addr)
+    }
+
+    fn length(&self) -> u64 {
+        self.length
+    }
+
+    fn entry_type(&self) -> MemoryMapEntryType {
+        self.r#type.into()
+    }
+}
+
+impl Debug for MemoryMapEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MemoryMapEntry")
+            .field("address", &self.address())
+            .field("length", &self.length())
+            .field("entry_type", &self.entry_type())
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
+#[repr(u32)]
+pub enum MemoryMapEntryType {
+    BootloaderReserved = 0,
+    AvailableRam = 1,
+    AcpiInfo = 3,
+    Reserved = 4,
+    DefectiveRam = 5,
+}
+
+impl From<u32> for MemoryMapEntryType {
+    fn from(i: u32) -> Self {
+        match i {
+            0 => Self::BootloaderReserved,
+            1 => Self::AvailableRam,
+            3 => Self::AcpiInfo,
+            4 => Self::DefectiveRam,
+            _ => Self::Reserved,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 #[repr(C, packed)]
 pub struct ElfSymbols {
     r#type: StructType,
@@ -531,10 +612,23 @@ pub struct ElfSymbols {
     entsize: u16,
     shndx: u16,
     _reserved: u16,
-    section_headers: [u8; 0], // FIXME allow for data
+    section_headers: [u8; 0], // TODO: learn how to parse elf symbols
 }
 
-#[derive(Debug, Clone, Copy)]
+impl Debug for ElfSymbols {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let num = self.num;
+        let entsize = self.entsize;
+        let shndx = self.shndx;
+        f.debug_struct("ElfSymbols")
+            .field("num", &num)
+            .field("entsize", &entsize)
+            .field("shndx", &shndx)
+            .finish_non_exhaustive()
+    }
+}
+
+#[derive(Clone, Copy)]
 #[repr(C, packed)]
 pub struct APMTable {
     r#type: StructType,
@@ -550,7 +644,32 @@ pub struct APMTable {
     dseg_len: u16,
 }
 
-#[derive(Debug, Clone, Copy)]
+impl Debug for APMTable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let version = self.version;
+        let cseg = self.cseg;
+        let offset = self.offset;
+        let cseg_16 = self.cseg_16;
+        let dseg = self.dseg;
+        let flags = self.flags;
+        let cseg_len = self.cseg_len;
+        let cseg_16_len = self.cseg_16_len;
+        let dseg_len = self.dseg_len;
+        f.debug_struct("ElfSymbols")
+            .field("version", &version)
+            .field("cseg", &cseg)
+            .field("offset", &offset)
+            .field("cseg_16", &cseg_16)
+            .field("dseg", &dseg)
+            .field("flags", &flags)
+            .field("cseg_len", &cseg_len)
+            .field("cseg_16_len", &cseg_16_len)
+            .field("dseg_len", &dseg_len)
+            .finish()
+    }
+}
+
+#[derive(Clone, Copy)]
 #[repr(C, packed)]
 pub struct EFI32Table {
     r#type: StructType,
@@ -558,12 +677,40 @@ pub struct EFI32Table {
     pointer: u32,
 }
 
-#[derive(Debug, Clone, Copy)]
+impl EFI32Table {
+    pub fn address(&self) -> PhysicalAddress {
+        PhysicalAddress::new(self.pointer.into())
+    }
+}
+
+impl Debug for EFI32Table {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("EFI32Table")
+            .field("address", &self.address())
+            .finish()
+    }
+}
+
+#[derive(Clone, Copy)]
 #[repr(C, packed)]
 pub struct EFI64Table {
     r#type: StructType,
     size: u32,
     pointer: u64,
+}
+
+impl EFI64Table {
+    pub fn address(&self) -> PhysicalAddress {
+        PhysicalAddress::new(self.pointer)
+    }
+}
+
+impl Debug for EFI64Table {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("EFI64Table")
+            .field("address", &self.address())
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
