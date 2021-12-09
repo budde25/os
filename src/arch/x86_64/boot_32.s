@@ -36,10 +36,16 @@ stack_bottom:
     .skip 16384 # 16 Kib
 stack_top:
 
+.section .data
+.global multiboot_info_ptr
+multiboot_info_ptr:
+    .zero 4
+
 .section .text
 .global _start
 .type _start, @function
 _start:
+    mov multiboot_info_ptr, ebx
     mov esp, offset stack_top # stack grows from downwards
   
     call check_multiboot

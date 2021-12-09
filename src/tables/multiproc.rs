@@ -1,5 +1,7 @@
+const MP_SIGNATURE: [char; 4] = ['_', 'M', 'P', '_'];
+
 #[repr(C, packed)]
-struct FloatingPointerStructure {
+struct MultiProcessor {
     signature: [char; 4], // "_MP_" or 0x5F504D5F.
     configuration_table: u32,
     length: u8, // In 16 bytes (e.g. 1 = 16 bytes, 2 = 32 bytes)
@@ -12,7 +14,7 @@ struct FloatingPointerStructure {
 }
 
 #[repr(C, packed)]
-struct ConfigurationTable {
+struct MPConfigurationTable {
     signature: [char; 4], // "PCMP"
     length: u32,
     mp_specification_revision: u8,
@@ -29,7 +31,7 @@ struct ConfigurationTable {
 }
 
 #[repr(C, packed)]
-struct ProcessorEntry {
+struct MPProcessorEntry {
     proc_type: u8, // Always 0
     local_apic_id: u8,
     local_apic_version: u8,
@@ -41,10 +43,34 @@ struct ProcessorEntry {
 }
 
 #[repr(C, packed)]
-struct OIApicEntry {
+struct MPOIApicEntry {
     apci_type: u8, // Always 2
     id: u8,
     version: u8,
     flags: u8,    // If bit 0 is set then the entry should be ignored
     address: u32, // The memory mapped address of the IO APIC is memory
 }
+
+// impl MultiProcessor {
+//     pub fn new() -> Self {
+//         let bda = PhysicalAddress::new(0x400);
+//         let p = bda.as_mut_ptr() + 0x0F << 8;
+
+//         todo!()
+//     }
+
+//     fn search(addr: PhysicalAddress, len: usize) -> Option<&'static Self> {
+//         let end = addr + len;
+//         let mut addr = addr;
+//         while addr < end {
+//             let table = addr.as_mut_ptr::<MultiProcessor>();
+//             let mp = unsafe { table.read_unaligned().signature };
+//             if mp == MP_SIGNATURE {
+//                 return unsafe { Some(&*table) };
+//             }
+//             addr += core::mem::size_of::<MultiProcessor>();
+//         }
+
+//         None
+//     }
+// }

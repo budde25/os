@@ -1,2 +1,4 @@
 mod madt;
-mod rsdp;
+pub mod multiboot2;
+mod multiproc;
+pub mod rsdp;
