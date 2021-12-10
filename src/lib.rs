@@ -18,6 +18,7 @@ extern crate alloc;
 pub mod address;
 pub mod arch;
 pub mod consts;
+pub mod disk;
 pub mod interrupts;
 pub mod io;
 pub mod memory;
@@ -56,8 +57,8 @@ pub fn test_runner(tests: &[&dyn Testable]) {
 }
 
 pub fn test_panic_handler(info: &core::panic::PanicInfo) -> ! {
-    kprintln!("[failed]\n");
-    kprintln!("Error: {}\n", info);
+    kpanicprintln!("[failed]\n");
+    kpanicprintln!("Error: {}\n", info);
     exit_qemu(QemuExitCode::Failed);
     interrupts::halt_loop();
 }

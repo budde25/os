@@ -19,6 +19,7 @@ extern crate alloc;
 mod address;
 mod arch;
 mod consts;
+mod disk;
 mod interrupts;
 mod io;
 mod memory;
@@ -39,8 +40,14 @@ pub extern "C" fn kmain() -> ! {
     // ready to start scheduling. The last thing this
     // should do is start the timer.
 
-    // Map all of physical memory to addr + kernel offset
+    // Map all of physical memory to addr + kernel offset,
+    // we should start with this to avoid errors with physical addrs
     paging::map_all_physical_memory();
+
+    // log that we are starting
+    if let Some(name) = tables::MULTIBOOT.boot_loader_name {
+        kprintln!("Booting from: {}", name.string())
+    }
 
     interrupts::init();
     // TODO: enable the lapic
@@ -51,19 +58,6 @@ pub extern "C" fn kmain() -> ! {
     memory::heap::init();
     // enable interrupts
     interrupts::enable_interrupts();
-
-    // let virt = VirtualAddress::new(0xb8000);
-    // let phys: PhysicalAddress = virt.into();
-    // let mut ptr = virt.as_mut_ptr::<u8>();
-    // let mut ptr2 = phys.as_mut_ptr::<u8>();
-    // unsafe {
-    //     for _ in 0..1000 {
-    //         ptr2.write_volatile(u8::MAX);
-    //         ptr.write_volatile(u8::MAX);
-    //         ptr = ptr.sub(8);
-    //         ptr2 = ptr2.sub(8);
-    //     }
-    // }
 
     kprintln!("Hello World");
 
@@ -78,16 +72,16 @@ extern "C" fn eh_personality() {
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    kprint!("Aborting: ");
+    kpanicprint!("Aborting: ");
     if let Some(p) = info.location() {
-        kprintln!(
+        kpanicprintln!(
             "line {}, file {}: {}",
             p.line(),
             p.file(),
             info.message().unwrap()
         );
     } else {
-        kprintln!("no information available.");
+        kpanicprintln!("no information available.");
     }
     abort();
 }
