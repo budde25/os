@@ -7,7 +7,7 @@ pub mod vga;
 
 use core::fmt::{Arguments, Write};
 //use lapic::Lapic;
-use lazy_static::lazy_static;
+use lazy_static::{__Deref, lazy_static};
 use pic::Pic;
 use spin::Mutex;
 use uart::Uart;
@@ -25,6 +25,11 @@ lazy_static! {
         let mut uart = Uart::default();
         unsafe { uart.init() };
         Mutex::new(uart)
+    };
+    static ref PANIC_VGA: Mutex<Vga> = {
+        let mut writer = Vga::new_panic();
+        writer.clear_screen();
+        Mutex::new(writer)
     };
     static ref PIC_1: Mutex<Pic> = {
         let pic = Pic::pic_1();
@@ -103,7 +108,13 @@ macro_rules! kdbg {
 /// Print that writes to VGA buffer and Uart
 #[macro_export]
 macro_rules! kprint {
-    ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*), false));
+}
+
+/// Panic use only, Print that writes to VGA buffer and Uart
+#[macro_export]
+macro_rules! kpanicprint {
+    ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*), true));
 }
 
 /// Print line that writes to VGA and Uart
@@ -113,26 +124,42 @@ macro_rules! kprintln {
     ($($arg:tt)*) => ($crate::kprint!("{}\n", format_args!($($arg)*)));
 }
 
-#[doc(hidden)]
-pub fn _print(args: Arguments) {
-    _print_vga(args);
-    _print_uart(args);
+/// Panic use only, Print line that writes to VGA and Uart
+#[macro_export]
+macro_rules! kpanicprintln {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::kpanicprint!("{}\n", format_args!($($arg)*)));
 }
 
 #[doc(hidden)]
-pub fn _print_vga(args: Arguments) {
+pub fn _print(args: Arguments, panic: bool) {
+    _print_vga(args, panic);
+    _print_uart(args, panic);
+}
+
+#[doc(hidden)]
+pub fn _print_vga(args: Arguments, panic: bool) {
     use crate::interrupts::without_interrupts;
 
     without_interrupts(|| {
-        VGA.lock().write_fmt(args).unwrap();
+        if panic {
+            PANIC_VGA.lock().write_fmt(args).unwrap();
+        } else {
+            VGA.lock().write_fmt(args).unwrap();
+        }
     })
 }
 
 #[doc(hidden)]
-pub fn _print_uart(args: Arguments) {
+pub fn _print_uart(args: Arguments, panic: bool) {
     use crate::interrupts::without_interrupts;
 
     without_interrupts(|| {
-        UART.lock().write_fmt(args).unwrap();
+        if panic {
+            unsafe { UART.force_unlock() };
+            UART.lock().write_fmt(args).unwrap()
+        } else {
+            UART.lock().write_fmt(args).unwrap();
+        }
     })
 }

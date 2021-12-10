@@ -93,6 +93,15 @@ impl Default for Vga {
 }
 
 impl Vga {
+    pub fn new_panic() -> Self {
+        Self {
+            column_position: 0,
+            color_code: ColorCode::new(Color::Red, Color::White),
+            // Safety: 0xb8000 is the location of the VGA buffer
+            buffer: unsafe { &mut *(BUFFER_ADDR.as_mut_ptr::<Buffer>()) },
+        }
+    }
+
     fn write_byte(&mut self, byte: u8) {
         match byte {
             b'\n' => self.new_line(),
