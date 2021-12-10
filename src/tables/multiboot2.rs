@@ -1,34 +1,34 @@
-use crate::tables::rsdp::{RSDPV1, RSDPV2};
-use crate::{address::phys::PhysicalAddress, kdbg};
+use crate::address::phys::PhysicalAddress;
+use crate::tables::acpi::{RSDPV1, RSDPV2};
 use core::fmt::{self, Debug};
 
 /// A struct for parsing multiboot2 boot info
 #[derive(Debug)]
 pub struct Multiboot {
     start_address: PhysicalAddress,
-    multiboot_table: &'static MultibootTable,
+    pub multiboot_table: &'static MultibootTable,
     index: u32,
-    boot_command_line: Option<&'static BootCommandLine>,
-    boot_loader_name: Option<&'static BootLoaderName>,
-    modules: Option<&'static Modules>, // FIXME allow for an arbitary amount of modules
-    basic_memory_info: Option<&'static BasicMemoryInfo>,
-    bios_boot_device: Option<&'static BIOSBootDevice>,
-    memory_map: Option<&'static MemoryMap>,
-    vbe_info: Option<&'static VBEInfo>,
-    frame_buffer_info: Option<&'static FrameBufferInfo>,
-    elf_symbols: Option<&'static ElfSymbols>,
-    apm_table: Option<&'static APMTable>,
-    efi_32_table: Option<&'static EFI32Table>,
-    efi_64_table: Option<&'static EFI64Table>,
-    sm_bios_tables: Option<&'static SMBIOSTables>,
-    rsdp_v1: Option<&'static RSDPV1>,
-    rsdp_v2: Option<&'static RSDPV2>,
-    network_info: Option<&'static NetworkInfo>,
-    efi_memory_map: Option<&'static EFIMemoryMap>,
-    efi_error: Option<&'static EFIError>,
-    efi_32_image: Option<&'static EFI32Image>,
-    efi_64_image: Option<&'static EFI64Image>,
-    image_loader_base: Option<&'static ImageLoaderBase>,
+    pub boot_command_line: Option<&'static BootCommandLine>,
+    pub boot_loader_name: Option<&'static BootLoaderName>,
+    pub modules: Option<&'static Modules>, // FIXME allow for an arbitary amount of modules
+    pub basic_memory_info: Option<&'static BasicMemoryInfo>,
+    pub bios_boot_device: Option<&'static BIOSBootDevice>,
+    pub memory_map: Option<&'static MemoryMap>,
+    pub vbe_info: Option<&'static VBEInfo>,
+    pub frame_buffer_info: Option<&'static FrameBufferInfo>,
+    pub elf_symbols: Option<&'static ElfSymbols>,
+    pub apm_table: Option<&'static APMTable>,
+    pub efi_32_table: Option<&'static EFI32Table>,
+    pub efi_64_table: Option<&'static EFI64Table>,
+    pub sm_bios_tables: Option<&'static SMBIOSTables>,
+    pub rsdp_v1: Option<&'static RSDPV1>,
+    pub rsdp_v2: Option<&'static RSDPV2>,
+    pub network_info: Option<&'static NetworkInfo>,
+    pub efi_memory_map: Option<&'static EFIMemoryMap>,
+    pub efi_error: Option<&'static EFIError>,
+    pub efi_32_image: Option<&'static EFI32Image>,
+    pub efi_64_image: Option<&'static EFI64Image>,
+    pub image_loader_base: Option<&'static ImageLoaderBase>,
 }
 
 impl Multiboot {
