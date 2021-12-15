@@ -4,10 +4,12 @@ use bit_field::BitField;
 use core::convert::TryFrom;
 use core::fmt::{self, Debug, Formatter};
 use core::ops::{Add, AddAssign, Sub, SubAssign};
+use derive_more::{Binary, Display, LowerHex, UpperHex};
 
 use super::{align_down, align_up};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Display, UpperHex, LowerHex, Binary)]
+#[display(fmt = "P_0x{:X}", _0)]
 #[repr(transparent)]
 
 pub struct PhysicalAddress(u64);
@@ -38,11 +40,11 @@ impl PhysicalAddress {
         (self.0 + KERNEL_OFFSET as u64) as *const T
     }
 
-    pub fn as_mut_ptr<T>(&self) -> *mut T {
+    pub const fn as_mut_ptr<T>(&self) -> *mut T {
         self.as_ptr::<T>() as *mut T
     }
 
-    pub fn is_null(self) -> bool {
+    pub const fn is_null(self) -> bool {
         self.0 == 0
     }
 
@@ -194,24 +196,6 @@ impl Debug for PhysicalAddress {
             .field("address", &format_args!("{:#X}", self))
             .field("section", &self.section())
             .finish()
-    }
-}
-
-impl fmt::Binary for PhysicalAddress {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Binary::fmt(&self.0, f)
-    }
-}
-
-impl fmt::UpperHex for PhysicalAddress {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::UpperHex::fmt(&self.0, f)
-    }
-}
-
-impl fmt::LowerHex for PhysicalAddress {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::LowerHex::fmt(&self.0, f)
     }
 }
 

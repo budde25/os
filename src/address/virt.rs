@@ -4,13 +4,15 @@ use bit_field::BitField;
 use core::convert::{From, TryFrom};
 use core::fmt::{self, Debug, Formatter};
 use core::ops::{Add, AddAssign, Sub, SubAssign};
+use derive_more::{Binary, Display, LowerHex, UpperHex};
 
 /// Much of the code in this section is used from Phil's excellent x86_64
 /// https://github.com/rust-osdev/x86_64/blob/master/src/addr.rs
 
 /// Virtual address space
 /// https://en.wikipedia.org/wiki/X86-64#Virtual_address_space_details
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Display, UpperHex, LowerHex, Binary)]
+#[display(fmt = "V_0x{:X}", _0)]
 #[repr(transparent)]
 pub struct VirtualAddress(u64);
 
@@ -228,24 +230,6 @@ impl Debug for VirtualAddress {
         f.debug_tuple("VirtualAddress")
             .field(&format_args!("{:#X}", self))
             .finish()
-    }
-}
-
-impl fmt::Binary for VirtualAddress {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Binary::fmt(&self.0, f)
-    }
-}
-
-impl fmt::UpperHex for VirtualAddress {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::UpperHex::fmt(&self.0, f)
-    }
-}
-
-impl fmt::LowerHex for VirtualAddress {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::LowerHex::fmt(&self.0, f)
     }
 }
 
