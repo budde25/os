@@ -1,6 +1,8 @@
 use bitflags::bitflags;
 use port::Port;
 
+use crate::{interrupts::idt::handlers::debug, kdbg};
+
 pub const PIC_1_OFFSET: u8 = 32;
 
 bitflags! {
@@ -129,6 +131,18 @@ impl Pic {
 
             // Restore mask
             self.data.write(mask);
+        }
+    }
+
+    pub fn set_mask_all(&mut self) {
+        unsafe {
+            self.data.write(0xFF);
+        }
+    }
+
+    pub fn clear_mask_all(&mut self) {
+        unsafe {
+            self.data.write(0xFF);
         }
     }
 

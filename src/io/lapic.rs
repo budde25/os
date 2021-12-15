@@ -132,6 +132,14 @@ impl Lapic {
     }
 }
 
+impl Default for Lapic {
+    fn default() -> Self {
+        use crate::tables::MADT_TABLE;
+        let ptr = unsafe { &mut *MADT_TABLE.lapic_addr().as_mut_ptr::<Registers>() };
+        Self::new(ptr)
+    }
+}
+
 #[derive(Debug)]
 #[repr(align(16), C)]
 pub struct Registers {

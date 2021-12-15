@@ -6,7 +6,7 @@ pub mod uart;
 pub mod vga;
 
 use core::fmt::{Arguments, Write};
-//use lapic::Lapic;
+use lapic::Lapic;
 use lazy_static::lazy_static;
 use pic::Pic;
 use spin::Mutex;
@@ -39,19 +39,20 @@ lazy_static! {
         let pic = Pic::pic_2();
         Mutex::new(pic)
     };
-    // static ref LAPIC: Mutex<Lapic> = {
-    //     let lapic = Lapic::default();
-    //     Mutex::new(lapic)
-    // };
+    static ref LAPIC: Mutex<Lapic> = {
+        let lapic = Lapic::default();
+        Mutex::new(lapic)
+    };
 }
 
 pub fn pic_init() {
     pic_remap();
+    pic_mask();
     //pic_disable();
 }
 
 pub fn lapic_init() {
-    // LAPIC.init();
+    LAPIC.lock().init();
 }
 
 pub fn pic_eoi(index: usize) {
@@ -80,6 +81,12 @@ fn pic_remap() {
 fn pic_disable() {
     PIC_1.lock().disable();
     PIC_2.lock().disable();
+}
+
+/// mask all values
+fn pic_mask() {
+    PIC_1.lock().set_mask_all();
+    PIC_2.lock().set_mask_all();
 }
 
 #[macro_export]

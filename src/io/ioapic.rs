@@ -7,6 +7,11 @@ impl IOApicRef {
         Self(Volatile::new(&mut *(ptr as *mut IOApic)))
     }
 
+    pub fn init(&mut self) {
+        let maxintr = (self.read(0x1) >> 16) & 0xFF;
+        let id = self.read(0x00) >> 24;
+    }
+
     fn write(&mut self, register: u32, data: u32) {
         self.0.map_mut(|apic| &mut apic.register).write(register);
         self.0.map_mut(|apic| &mut apic.data).write(data);
