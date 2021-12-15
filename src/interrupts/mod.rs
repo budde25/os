@@ -6,6 +6,8 @@ use gdt::GlobalDescriptorTable;
 
 use tss::TaskStateSegment;
 
+use crate::kprintln;
+
 pub mod errors;
 pub mod gdt;
 pub mod idt;
@@ -201,6 +203,7 @@ pub fn init() {
         // gdt::load_ds(GDT.1.kernel_data_segment);
         gdt::load_tss(GDT.1.tss_segment);
     }
+    kprintln!("IDT & GDT initialized");
 }
 
 // Run a chunk of code without interrupts enabled

@@ -4,14 +4,16 @@ use bit_field::BitField;
 use core::convert::{From, TryFrom};
 use core::fmt::{self, Debug, Formatter};
 use core::ops::{Add, AddAssign, Sub, SubAssign};
-use derive_more::{Binary, Display, LowerHex, UpperHex};
+use derive_more::{Binary, Display, Into, LowerHex, UpperHex};
 
 /// Much of the code in this section is used from Phil's excellent x86_64
 /// https://github.com/rust-osdev/x86_64/blob/master/src/addr.rs
 
 /// Virtual address space
 /// https://en.wikipedia.org/wiki/X86-64#Virtual_address_space_details
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Display, UpperHex, LowerHex, Binary)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Into, Display, UpperHex, LowerHex, Binary,
+)]
 #[display(fmt = "V_0x{:X}", _0)]
 #[repr(transparent)]
 pub struct VirtualAddress(u64);
@@ -32,11 +34,11 @@ impl VirtualAddress {
         }
     }
 
-    pub fn truncate_new(address: u64) -> Self {
+    pub const fn truncate_new(address: u64) -> Self {
         Self(((address << 16) as i64 >> 16) as u64)
     }
 
-    pub fn is_null(&self) -> bool {
+    pub const fn is_null(&self) -> bool {
         self.0 == 0
     }
 
@@ -230,12 +232,6 @@ impl Debug for VirtualAddress {
         f.debug_tuple("VirtualAddress")
             .field(&format_args!("{:#X}", self))
             .finish()
-    }
-}
-
-impl From<VirtualAddress> for u64 {
-    fn from(addr: VirtualAddress) -> Self {
-        addr.0
     }
 }
 
