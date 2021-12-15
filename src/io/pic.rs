@@ -1,8 +1,6 @@
 use bitflags::bitflags;
 use port::Port;
 
-use crate::{interrupts::idt::handlers::debug, kdbg};
-
 pub const PIC_1_OFFSET: u8 = 32;
 
 bitflags! {

@@ -1,4 +1,3 @@
-use super::madt::MADT;
 use crate::address::phys::PhysicalAddress;
 use core::str;
 use core::{fmt::Debug, mem::size_of, ptr::addr_of};
@@ -197,7 +196,7 @@ impl ACPI {
 
     pub fn init(&mut self) {
         let entry_count = self.rsdt.total_entries();
-        for i in 0..2 {
+        for i in 0..entry_count {
             // TODO parse all tables
             let ptr = self.rsdt.entry(i).as_ptr::<ACPISDTHeader>();
             let header = unsafe { *ptr };
@@ -206,8 +205,8 @@ impl ACPI {
             match signature {
                 "FACP" => self.fadt = Some(unsafe { &*self.rsdt.entry(i).as_ptr::<FADT>() }),
                 "APIC" => self.madt_ptr = Some(self.rsdt.entry(i)),
-                "HPET" => todo!(),
-                "WAET" => todo!(),
+                "HPET" => {}
+                "WAET" => {}
                 _ => todo!(),
             }
         }

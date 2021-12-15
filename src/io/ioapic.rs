@@ -8,8 +8,8 @@ impl IOApicRef {
     }
 
     pub fn init(&mut self) {
-        let maxintr = (self.read(0x1) >> 16) & 0xFF;
-        let id = self.read(0x00) >> 24;
+        let _maxintr = (self.read(0x1) >> 16) & 0xFF;
+        let _id = self.read(0x00) >> 24;
     }
 
     fn write(&mut self, register: u32, data: u32) {
