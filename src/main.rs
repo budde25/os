@@ -11,6 +11,11 @@
 #![reexport_test_harness_main = "test_main"]
 #![allow(dead_code)]
 
+use crate::address::phys::PhysicalAddress;
+use lazy_static::__Deref;
+
+use crate::tables::{ACPI_TABLE, MULTIBOOT};
+
 global_asm!(include_str!("arch/x86_64/boot_32.s"));
 global_asm!(include_str!("arch/x86_64/boot_64.s"));
 
@@ -49,6 +54,8 @@ pub extern "C" fn kmain() -> ! {
         kprintln!("Booting from: {}", name.string())
     }
 
+    kprintln!("Number of cores: {}", tables::MADT_TABLE.num_cores());
+
     interrupts::init();
     // TODO: enable the lapic
     io::lapic_init();
@@ -83,7 +90,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     } else {
         kpanicprintln!("no information available.");
     }
-    abort();
+    abort()
 }
 
 #[no_mangle]
