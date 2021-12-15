@@ -3,7 +3,7 @@
 ROOT := justfile_directory()
 TARGET_DIR := justfile_directory() + "/target"
 OUTPUT_FILE := justfile_directory() + "/target/x86_64-os/debug/os"
-QEMU_ARGS := "-serial mon:stdio"
+QEMU_ARGS := "-serial mon:stdio -smp 2"
 QEMU_ARGS_NOX := QEMU_ARGS + " -nographic"
 QEMU_TARGET := "-cdrom " + TARGET_DIR + "/os.iso"
 
