@@ -2,18 +2,30 @@ pub mod allocator;
 pub mod page_table;
 pub mod phys_frame;
 
+use allocator::Mapper;
+use lazy_static::lazy_static;
+use spin::Mutex;
+
+use crate::kprintln;
+
+lazy_static! {
+    pub static ref MAPPER: Mutex<Mapper> = {
+        let m = unsafe { Mapper::new() };
+        Mutex::new(m)
+    };
+}
+
 // Map all of physical memory to += phys mem offset
 pub fn map_all_physical_memory() {
     // TODO this could use some serious refactoring
     use crate::address::phys::PhysicalAddress;
     use crate::address::sections::Section;
     use crate::address::SECTIONS;
-    use allocator::Mapper;
     use page_table::{Level4, PageFlags, PageTable, PageTableEntry};
 
     const SIZE_2MIB: u64 = 0x200000;
 
-    let mut m = unsafe { Mapper::new() };
+    let mut m = MAPPER.lock();
     let p4 = m.p4_mut();
 
     let page_table_3 = SECTIONS[Section::PhysPageTable].start();
@@ -42,4 +54,5 @@ pub fn map_all_physical_memory() {
             addr_final += SIZE_2MIB;
         }
     }
+    kprintln!("All physical memory as been mapped");
 }
