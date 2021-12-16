@@ -1,3 +1,4 @@
+pub mod cmos;
 pub mod ioapic;
 pub mod keyboard;
 pub mod lapic;
@@ -5,6 +6,7 @@ pub mod pic;
 pub mod uart;
 pub mod vga;
 
+use cmos::Cmos;
 use core::fmt::{Arguments, Write};
 use lapic::Lapic;
 use lazy_static::lazy_static;
@@ -42,6 +44,10 @@ lazy_static! {
     static ref LAPIC: Mutex<Lapic> = {
         let lapic = Lapic::default();
         Mutex::new(lapic)
+    };
+    pub static ref CMOS: Mutex<Cmos> = {
+        let cmos = Cmos::default();
+        Mutex::new(cmos)
     };
 }
 

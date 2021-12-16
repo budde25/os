@@ -61,6 +61,8 @@ pub extern "C" fn kmain() -> ! {
     // enable interrupts
     interrupts::enable_interrupts();
 
+    kprintln!("Current time: {}", io::CMOS.lock().time());
+
     kprintln!("Hello World");
 
     interrupts::halt_loop();
