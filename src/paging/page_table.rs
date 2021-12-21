@@ -1,11 +1,9 @@
-use crate::address::phys::PhysicalAddress;
 use crate::paging::phys_frame::PhysFrame;
+use crate::PhysicalAddress;
 use bitflags::bitflags;
+use core::fmt::{self, Debug};
+use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
-use core::{
-    fmt::{self, Debug},
-    marker::PhantomData,
-};
 
 const PAGE_TABLE_ENTRY_COUNT: usize = 512;
 

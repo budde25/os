@@ -1,9 +1,13 @@
 use lazy_static::lazy_static;
 use sections::Sections;
 
-pub mod phys;
+// export up
+pub use phys::PhysicalAddress;
+pub use virt::VirtualAddress;
+
+mod phys;
 pub mod sections;
-pub mod virt;
+mod virt;
 
 pub const fn align_down(addr: u64, align: u64) -> u64 {
     assert!(align.is_power_of_two(), "`align` must be a power of two");

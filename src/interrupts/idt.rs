@@ -2,11 +2,10 @@ use super::{DescriptorTablePointer, SegmentSelector};
 use crate::interrupts::errors::{ExceptionStackFrame, PageFaultErrorCode, SelectorError};
 use bit_field::BitField;
 use bitflags::bitflags;
+use core::arch::asm;
+use core::fmt::{self, Debug, Formatter};
+use core::marker::PhantomData;
 use core::usize;
-use core::{
-    fmt::{self, Debug, Formatter},
-    marker::PhantomData,
-};
 
 pub trait Handler {}
 
@@ -258,11 +257,8 @@ impl From<u8> for InterruptIndex {
 }
 
 pub mod handlers {
-    use super::InterruptIndex;
-    use crate::interrupts::{
-        errors::{ExceptionStackFrame, PageFaultErrorCode, SelectorError},
-        halt_loop,
-    };
+    use crate::interrupts::errors::{ExceptionStackFrame, PageFaultErrorCode, SelectorError};
+    use crate::interrupts::halt_loop;
     use crate::kprintln;
 
     /// 1
@@ -418,8 +414,8 @@ pub mod handlers {
 
     /// Timer Interrupt
     pub extern "x86-interrupt" fn timer(_stack_frame: ExceptionStackFrame) {
-        //crate::kprint!(".");
-        crate::io::pic_eoi(InterruptIndex::Timer.into());
+        crate::kprint!(".");
+        crate::io::lapic_eoi();
     }
 
     /// Keyboard Interrupt
@@ -431,7 +427,7 @@ pub mod handlers {
             crate::kprint!("{}", key);
         }
 
-        crate::io::pic_eoi(InterruptIndex::Keyboard.into());
+        crate::io::lapic_eoi();
     }
 }
 

@@ -1,4 +1,5 @@
 pub mod cmos;
+pub mod console;
 pub mod ioapic;
 pub mod keyboard;
 pub mod lapic;
@@ -8,6 +9,7 @@ pub mod vga;
 
 use cmos::Cmos;
 use core::fmt::{Arguments, Write};
+use ioapic::IOApicRef;
 use lapic::Lapic;
 use lazy_static::lazy_static;
 use pic::Pic;
@@ -49,16 +51,22 @@ lazy_static! {
         let cmos = Cmos::default();
         Mutex::new(cmos)
     };
+    static ref IO_APIC: Mutex<IOApicRef> = {
+        let ioapic = IOApicRef::default();
+        Mutex::new(ioapic)
+    };
 }
 
 pub fn pic_init() {
     pic_remap();
     pic_mask();
     //pic_disable();
+    crate::kprintln!("PIC's have been remaped, masked, and (TODO: disable?)");
 }
 
 pub fn lapic_init() {
     LAPIC.lock().init();
+    crate::kprintln!("LAPIC has been initialized");
 }
 
 pub fn pic_eoi(index: usize) {
@@ -68,6 +76,10 @@ pub fn pic_eoi(index: usize) {
     }
 
     PIC_1.lock().end_of_interrupt();
+}
+
+pub fn lapic_eoi() {
+    LAPIC.lock().end_of_interrupt();
 }
 
 pub fn uart_disable() {
@@ -93,6 +105,11 @@ fn pic_disable() {
 fn pic_mask() {
     PIC_1.lock().set_mask_all();
     PIC_2.lock().set_mask_all();
+}
+
+pub fn ioapic_init() {
+    IO_APIC.lock().init();
+    IO_APIC.lock().enable(1, 0);
 }
 
 #[macro_export]

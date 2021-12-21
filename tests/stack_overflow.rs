@@ -1,6 +1,6 @@
 #![no_std]
 #![no_main]
-#![feature(global_asm, custom_test_frameworks, abi_x86_interrupt)]
+#![feature(custom_test_frameworks, abi_x86_interrupt)]
 #![test_runner(os::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 

@@ -1,6 +1,7 @@
-use crate::address::{phys::PhysicalAddress, virt::VirtualAddress};
 use crate::paging::phys_frame::PhysFrame;
+use crate::{PhysicalAddress, VirtualAddress};
 use bitflags::bitflags;
+use core::arch::asm;
 
 bitflags! {
     pub struct Cr0: u64 {

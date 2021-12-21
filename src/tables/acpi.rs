@@ -1,4 +1,4 @@
-use crate::address::phys::PhysicalAddress;
+use crate::PhysicalAddress;
 use core::str;
 use core::{fmt::Debug, mem::size_of, ptr::addr_of};
 

@@ -1,5 +1,5 @@
-use crate::address::phys::PhysicalAddress;
 use crate::tables::acpi::{RSDPV1, RSDPV2};
+use crate::PhysicalAddress;
 use core::fmt::{self, Debug};
 
 /// A struct for parsing multiboot2 boot info

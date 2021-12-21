@@ -1,4 +1,4 @@
-use crate::address::phys::PhysicalAddress;
+use crate::PhysicalAddress;
 
 /// A 4kb physical memory frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

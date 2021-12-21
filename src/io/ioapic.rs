@@ -1,6 +1,6 @@
 use volatile::Volatile;
 
-struct IOApicRef(Volatile<&'static mut IOApic>);
+pub struct IOApicRef(Volatile<&'static mut IOApic>);
 
 impl IOApicRef {
     unsafe fn new(ptr: *mut IOApic) -> Self {

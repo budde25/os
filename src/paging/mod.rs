@@ -6,8 +6,6 @@ use allocator::Mapper;
 use lazy_static::lazy_static;
 use spin::Mutex;
 
-use crate::kprintln;
-
 lazy_static! {
     pub static ref MAPPER: Mutex<Mapper> = {
         let m = unsafe { Mapper::new() };
@@ -18,9 +16,9 @@ lazy_static! {
 // Map all of physical memory to += phys mem offset
 pub fn map_all_physical_memory() {
     // TODO this could use some serious refactoring
-    use crate::address::phys::PhysicalAddress;
     use crate::address::sections::Section;
     use crate::address::SECTIONS;
+    use crate::PhysicalAddress;
     use page_table::{Level4, PageFlags, PageTable, PageTableEntry};
 
     const SIZE_2MIB: u64 = 0x200000;
@@ -54,5 +52,5 @@ pub fn map_all_physical_memory() {
             addr_final += SIZE_2MIB;
         }
     }
-    kprintln!("All physical memory as been mapped");
+    crate::kprintln!("All physical memory as been mapped");
 }

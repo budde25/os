@@ -1,5 +1,5 @@
 use super::acpi::ACPISDTHeader;
-use crate::address::phys::PhysicalAddress;
+use crate::PhysicalAddress;
 use derive_more::From;
 
 pub struct MultiAPIC {

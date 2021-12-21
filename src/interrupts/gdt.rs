@@ -1,4 +1,4 @@
-use crate::address::virt::VirtualAddress;
+use crate::address::VirtualAddress;
 use crate::interrupts::tss::TaskStateSegment;
 use crate::interrupts::DescriptorTablePointer;
 
@@ -6,6 +6,7 @@ use super::{PrivilegeLevel, SegmentSelector};
 use arrayvec::ArrayVec;
 use bit_field::BitField;
 use bitflags::bitflags;
+use core::arch::asm;
 use core::fmt::{self, Debug, Formatter};
 
 #[derive(Debug, Clone, Hash)]

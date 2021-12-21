@@ -1,6 +1,6 @@
 use crate::paging::page_table::{Level4, PageTable};
 use crate::paging::phys_frame::PhysFrame;
-use crate::{address::virt::VirtualAddress, arch::x86_64::registers::Cr3};
+use crate::{arch::x86_64::registers::Cr3, VirtualAddress};
 
 pub struct FreeList {
     list: [PhysFrame; 256],

@@ -1,4 +1,5 @@
 use bit_field::BitField;
+use core::arch::asm;
 use core::{fmt, usize};
 use lazy_static::lazy_static;
 
@@ -228,6 +229,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::io::*;
+    use core::arch::asm;
 
     #[test_case]
     fn page_fault() {

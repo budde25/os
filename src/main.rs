@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
 #![feature(panic_info_message)]
-#![feature(asm)]
-#![feature(global_asm)]
 #![feature(lang_items)]
 #![feature(custom_test_frameworks)]
 #![feature(abi_x86_interrupt)]
@@ -11,8 +9,12 @@
 #![reexport_test_harness_main = "test_main"]
 #![allow(dead_code)]
 
-global_asm!(include_str!("arch/x86_64/boot_32.s"));
-global_asm!(include_str!("arch/x86_64/boot_64.s"));
+core::arch::global_asm!(include_str!("arch/x86_64/boot_32.s"));
+core::arch::global_asm!(include_str!("arch/x86_64/boot_64.s"));
+
+// export some common functionality
+pub use address::PhysicalAddress;
+pub use address::VirtualAddress;
 
 extern crate alloc;
 
@@ -56,6 +58,8 @@ pub extern "C" fn kmain() -> ! {
     io::lapic_init();
     // Remap and disable the pic
     io::pic_init();
+
+    io::ioapic_init();
     // enable the heap
     memory::heap::init();
     // enable interrupts

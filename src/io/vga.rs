@@ -1,6 +1,6 @@
 use core::fmt;
 
-use crate::address::phys::PhysicalAddress;
+use crate::PhysicalAddress;
 
 const BUFFER_WIDTH: usize = 80; // default 80
 const BUFFER_HEIGHT: usize = 25; // default 25

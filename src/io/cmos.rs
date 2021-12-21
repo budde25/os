@@ -159,6 +159,7 @@ pub struct RtcDate {
 }
 
 impl RtcDate {
+    /// Create an empty date (everything as a zero)
     pub fn empty() -> Self {
         Self {
             second: Second(0),
@@ -171,6 +172,7 @@ impl RtcDate {
         }
     }
 
+    /// Create a new date that reads from the cmos (this is somewhat expensive)
     pub fn cmos_read() -> Self {
         let mut cmos = Cmos::default();
 
@@ -185,20 +187,22 @@ impl RtcDate {
         }
     }
 
+    /// Convert from bsd encoded data
     pub fn bsd_convert(&mut self) {
-        self.second = Second(convert(self.second.into()));
-        self.minute = Minute(convert(self.minute.into()));
-        self.hour = Hour(convert(self.hour.into()));
-        self.day = Day(convert(self.day.into()));
-        self.month = Month(convert(self.month.into()));
-        self.year = Year(convert(self.year.into()));
+        self.second = Second(Self::convert(self.second.into()));
+        self.minute = Minute(Self::convert(self.minute.into()));
+        self.hour = Hour(Self::convert(self.hour.into()));
+        self.day = Day(Self::convert(self.day.into()));
+        self.month = Month(Self::convert(self.month.into()));
+        self.year = Year(Self::convert(self.year.into()));
 
         self.year += Year(2000);
     }
-}
 
-fn convert(value: u16) -> u16 {
-    ((value >> 4) * 10) + (value & 0xf)
+    /// Convert function
+    const fn convert(value: u16) -> u16 {
+        ((value >> 4) * 10) + (value & 0xf)
+    }
 }
 
 bitflags! {

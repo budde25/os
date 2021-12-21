@@ -4,13 +4,15 @@
 #![reexport_test_harness_main = "test_main"]
 #![allow(dead_code)]
 #![feature(custom_test_frameworks)]
-#![feature(asm)]
-#![feature(global_asm)]
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
 
-global_asm!(include_str!("arch/x86_64/boot_32.s"));
-global_asm!(include_str!("arch/x86_64/boot_64.s"));
+core::arch::global_asm!(include_str!("arch/x86_64/boot_32.s"));
+core::arch::global_asm!(include_str!("arch/x86_64/boot_64.s"));
+
+// export some common functionality
+pub use address::PhysicalAddress;
+pub use address::VirtualAddress;
 
 extern crate alloc;
 

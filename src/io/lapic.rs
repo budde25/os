@@ -2,6 +2,8 @@ use bitflags::bitflags;
 use core::ops::{Index, IndexMut};
 use volatile::Volatile;
 
+use crate::address::PhysicalAddress;
+
 bitflags! {
     struct InterruptCommand: u32 {
         const INIT     =  0x00000500;  // INIT/RESET
@@ -127,7 +129,7 @@ impl Lapic {
     }
 
     /// call when an interrupt has ended
-    fn end_of_interrupt(&mut self) {
+    pub fn end_of_interrupt(&mut self) {
         self.write(Register::EndOfInterrupt, 0);
     }
 }
@@ -135,13 +137,14 @@ impl Lapic {
 impl Default for Lapic {
     fn default() -> Self {
         use crate::tables::MADT_TABLE;
-        let ptr = unsafe { &mut *MADT_TABLE.lapic_addr().as_mut_ptr::<Registers>() };
+        let ptr: PhysicalAddress = MADT_TABLE.lapic_addr().into();
+        let ptr = unsafe { &mut *ptr.as_mut_ptr::<Registers>() };
         Self::new(ptr)
     }
 }
 
 #[derive(Debug)]
-#[repr(align(16), C)]
+#[repr(C)]
 pub struct Registers {
     _reserved_1: [Reg; 2],           // none
     id: Reg,                         // read/write
@@ -183,7 +186,7 @@ impl Index<Register> for Registers {
             Register::TaskPriority => &self.task_priority,
             Register::ArbitrationPriority => &self.arbitration_priority,
             Register::ProcessorPriority => &self.processor_priority,
-            Register::EndOfInterrupt => panic!("EOI is write only"),
+            Register::EndOfInterrupt => &self.end_of_interrupt,
             Register::RemoteRead => &self.remote_read,
             Register::LogicalDestination => &self.logical_destination,
             Register::DestinationFormat => &self.destination_format,
