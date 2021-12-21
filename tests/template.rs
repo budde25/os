@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(custom_test_frameworks)]
-#![test_runner(os::test_runner)]
+#![test_runner(os::common::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
@@ -15,5 +15,5 @@ pub extern "C" fn kmain() -> ! {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    os::test_panic_handler(info)
+    os::common::test_panic_handler(info)
 }

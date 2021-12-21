@@ -5,7 +5,7 @@
 #![feature(custom_test_frameworks)]
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
-#![test_runner(crate::test_runner)]
+#![test_runner(crate::common::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![allow(dead_code)]
 
@@ -20,6 +20,7 @@ extern crate alloc;
 
 mod address;
 mod arch;
+mod common;
 mod consts;
 mod disk;
 mod interrupts;
@@ -78,68 +79,19 @@ extern "C" fn eh_personality() {
     interrupts::halt_loop();
 }
 
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    kpanicprint!("Aborting: ");
+    crate::kpanicprint!("Aborting: ");
     if let Some(p) = info.location() {
-        kpanicprintln!(
+        crate::kpanicprintln!(
             "line {}, file {}: {}",
             p.line(),
             p.file(),
             info.message().unwrap()
         );
     } else {
-        kpanicprintln!("no information available.");
+        crate::kpanicprintln!("no information available.");
     }
-    abort()
-}
-
-#[no_mangle]
-#[cfg(not(test))]
-extern "C" fn abort() -> ! {
-    interrupts::halt_loop();
-}
-
-#[no_mangle]
-#[cfg(test)]
-extern "C" fn abort() -> ! {
-    exit_qemu(QemuExitCode::Failed as u32);
-    interrupts::halt_loop();
-}
-
-pub fn exit_qemu(exit_code: u32) {
-    use port::Port;
-    unsafe {
-        let mut port = Port::new(0xf4);
-        port.write(exit_code as u32);
-    }
-}
-
-#[cfg(test)]
-fn test_runner(tests: &[&dyn Testable]) {
-    kprintln!("Running {} tests", tests.len());
-    for test in tests {
-        test.run();
-    }
-    exit_qemu(QemuExitCode::Success as u32)
-}
-
-pub trait Testable {
-    fn run(&self);
-}
-
-impl<T> Testable for T
-where
-    T: Fn(),
-{
-    fn run(&self) {
-        kprint!("{}...\t", core::any::type_name::<T>());
-        self();
-        kprintln!("[ok]");
-    }
-}
-
-#[alloc_error_handler]
-fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
-    panic!("allocation error: {:?}", layout)
+    common::abort()
 }

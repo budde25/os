@@ -6,13 +6,11 @@
 
 use core::panic::PanicInfo;
 use lazy_static::lazy_static;
-use os::{
-    exit_qemu,
-    interrupts::{
-        errors::ExceptionStackFrame, gdt, idt::InterruptDescriptorTable, DOUBLE_FAULT_IST_INDEX,
-    },
-    kprint, QemuExitCode,
-};
+use os::common::exit_qemu;
+use os::interrupts::errors::ExceptionStackFrame;
+use os::interrupts::idt::InterruptDescriptorTable;
+use os::interrupts::{gdt, DOUBLE_FAULT_IST_INDEX};
+use os::kprint;
 
 static mut COUNTER: u64 = 0;
 
@@ -30,7 +28,7 @@ pub extern "C" fn kmain() -> ! {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    os::test_panic_handler(info)
+    os::common::test_panic_handler(info)
 }
 
 #[allow(unconditional_recursion)]
@@ -70,6 +68,6 @@ extern "x86-interrupt" fn test_double_fault_handler(
     _error_code: u64,
 ) -> ! {
     os::kprintln!("[ok]");
-    exit_qemu(QemuExitCode::Success);
+    exit_qemu(true);
     loop {}
 }
