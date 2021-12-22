@@ -1,8 +1,7 @@
 use bitflags::bitflags;
 use core::ops::{Index, IndexMut};
-use volatile::Volatile;
 
-use crate::address::PhysicalAddress;
+use crate::kdbg;
 
 bitflags! {
     struct InterruptCommand: u32 {
@@ -15,6 +14,19 @@ bitflags! {
         const BCAST    =  0x00080000;  // Send to all APICs, including self.
         const BUSY     =  0x00001000;
         const FIXED    =  0x00000000;
+    }
+}
+
+bitflags! {
+    pub struct ErrorStatus: u32 {
+        const SEND_CHECKSUM =          0b00000001;
+        const RECIEVE_CHECKSUM =       0b00000010;
+        const SEND_ACCEPT =            0b00000100;
+        const RECIEVE_ACCEPT =         0b00001000;
+        const REDIRECTABLE_IPI =       0b00010000;
+        const SEND_ILLIGAL_VECTOR =    0b00100000;
+        const RECIEVE_ILLEGAL_VECTOR = 0b01000000;
+        const ILLEGAL_REGISTER_ADDR =  0b10000000;
     }
 }
 
@@ -48,11 +60,11 @@ enum Register {
     TimerDivideConfiguration,
 }
 
-pub struct Lapic(Volatile<&'static mut Registers>);
+pub struct Lapic(&'static mut Registers);
 
 impl Lapic {
     pub fn new(value: &'static mut Registers) -> Self {
-        Self(Volatile::new(value))
+        Self(value)
     }
 
     pub fn init(&mut self) {
@@ -94,8 +106,6 @@ impl Lapic {
         let error_irq = InterruptIndex::Error as u8;
         self.write(Reg::Error, (irq0 + error_irq) as u32);
 
-        // TODO clear the error status register
-
         // Ack outstanding interrupts
         self.end_of_interrupt();
 
@@ -113,19 +123,24 @@ impl Lapic {
 
     /// Write to a register
     fn write(&mut self, index: Register, value: u32) {
-        self.0.map_mut(|x| x.index_mut(index)).write(value.into());
+        self.0[index].write(value);
+
         // wait for write to finish, by reading
-        self.read(Register::Id);
+        self.id();
     }
 
     /// Read from a register
     fn read(&self, index: Register) -> u32 {
-        self.0.map(|x| x.index(index)).read().into()
+        self.0[index].read()
     }
 
     // Get the id of the lapic
-    fn id(&self) -> u32 {
+    pub fn id(&self) -> u32 {
         self.read(Register::Id) >> 24
+    }
+
+    pub fn error_status(&self) -> ErrorStatus {
+        ErrorStatus::from_bits_truncate(self.read(Register::ErrorStatus))
     }
 
     /// call when an interrupt has ended
@@ -137,13 +152,13 @@ impl Lapic {
 impl Default for Lapic {
     fn default() -> Self {
         use crate::tables::MADT_TABLE;
-        let ptr: PhysicalAddress = MADT_TABLE.lapic_addr().into();
-        let ptr = unsafe { &mut *ptr.as_mut_ptr::<Registers>() };
+        let pa = MADT_TABLE.lapic_addr();
+        let ptr = unsafe { &mut *pa.as_mut_ptr::<Registers>() };
         Self::new(ptr)
     }
 }
 
-#[derive(Debug)]
+// TODO we must write a custom debug that only reads from the readable registers, else we lock it up
 #[repr(C)]
 pub struct Registers {
     _reserved_1: [Reg; 2],           // none
@@ -186,7 +201,7 @@ impl Index<Register> for Registers {
             Register::TaskPriority => &self.task_priority,
             Register::ArbitrationPriority => &self.arbitration_priority,
             Register::ProcessorPriority => &self.processor_priority,
-            Register::EndOfInterrupt => &self.end_of_interrupt,
+            Register::EndOfInterrupt => panic!("End of Interrupt is write only"),
             Register::RemoteRead => &self.remote_read,
             Register::LogicalDestination => &self.logical_destination,
             Register::DestinationFormat => &self.destination_format,
@@ -247,20 +262,35 @@ impl IndexMut<Register> for Registers {
     }
 }
 
-/// A u32 register that takes up the space of a u128, required by the lapic
-#[derive(Debug, Clone, Copy)]
-#[repr(align(16))]
-struct Reg(u32);
+/// A u32 register that takes up the space of a u128, required by the lapic, we are expected to only read and write the lower 32 bits
+/// This thus cannot implement Copy or Clone as that would read the reserved space
+#[repr(C, packed)]
+struct Reg {
+    _reserved: [u32; 3],
+    data: u32,
+}
 
-impl core::convert::From<u32> for Reg {
-    fn from(num: u32) -> Self {
-        Self(num)
+impl Reg {
+    /// We are NOT allowed to write to the reserved space, so we must be careful to only write to the lowest 4 bytes (u32)
+    pub fn write(&mut self, value: u32) {
+        let ptr = self as *mut Self as *mut u32;
+        let ptr = unsafe { ptr.add(3) }; // skip the reserved
+        unsafe { ptr.write_volatile(value) };
+    }
+
+    /// We are NOT allowed to read to the reserved space, so we must be careful to only read from the lowest 4 bytes (u32)
+    pub fn read(&self) -> u32 {
+        let ptr = self as *const Self as *const u32;
+        let ptr = unsafe { ptr.add(3) }; // skip the reserved
+        unsafe { ptr.read_volatile() }
     }
 }
 
-impl core::convert::From<Reg> for u32 {
-    fn from(reg: Reg) -> Self {
-        reg.0
+impl core::fmt::Debug for Reg {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // special care to only read what is allowed
+        let data = self.read();
+        f.debug_tuple("Register").field(&data).finish()
     }
 }
 

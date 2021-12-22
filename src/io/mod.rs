@@ -65,8 +65,18 @@ pub fn pic_init() {
 }
 
 pub fn lapic_init() {
+    use crate::kprintln;
+
     LAPIC.lock().init();
-    crate::kprintln!("LAPIC has been initialized");
+    let status = LAPIC.lock().error_status();
+    if status.is_empty() {
+        kprintln!("LAPIC has been initialized");
+    } else {
+        kprintln!(
+            "LAPIC initialization has failed with error(s): {:#?}",
+            status
+        );
+    }
 }
 
 pub fn pic_eoi(index: usize) {
@@ -110,6 +120,8 @@ fn pic_mask() {
 pub fn ioapic_init() {
     IO_APIC.lock().init();
     IO_APIC.lock().enable(1, 0);
+
+    crate::kprintln!("IOAPIC has been initialized");
 }
 
 #[macro_export]

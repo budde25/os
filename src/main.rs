@@ -54,8 +54,10 @@ pub extern "C" fn kmain() -> ! {
 
     kprintln!("Number of cores: {}", tables::MADT_TABLE.num_cores());
 
+    // Load GDT and IDT
     interrupts::init();
-    // TODO: enable the lapic
+
+    // enable the lapic
     io::lapic_init();
     // Remap and disable the pic
     io::pic_init();

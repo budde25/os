@@ -414,7 +414,6 @@ pub mod handlers {
 
     /// Timer Interrupt
     pub extern "x86-interrupt" fn timer(_stack_frame: ExceptionStackFrame) {
-        crate::kprint!(".");
         crate::io::lapic_eoi();
     }
 
