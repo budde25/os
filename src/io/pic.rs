@@ -53,6 +53,46 @@ impl From<u16> for PicType {
     }
 }
 
+pub struct Pics {
+    pub main: Pic,
+    pub secondary: Pic,
+}
+
+impl Pics {
+    pub fn end_of_interrupt(&mut self, index: usize) {
+        // we always send it to the master but the slave too if it came from there
+        if index >= 8 {
+            self.secondary.end_of_interrupt();
+        }
+
+        self.main.end_of_interrupt();
+    }
+
+    pub fn remap(&mut self) {
+        self.main.remap();
+        self.secondary.remap();
+    }
+
+    pub fn disable(&mut self) {
+        self.main.disable();
+        self.secondary.disable();
+    }
+
+    pub fn mask_all(&mut self) {
+        self.main.set_mask_all();
+        self.secondary.set_mask_all();
+    }
+}
+
+impl Default for Pics {
+    fn default() -> Self {
+        Self {
+            main: Pic::pic_1(),
+            secondary: Pic::pic_2(),
+        }
+    }
+}
+
 /// Programmable Interrupt Controller
 pub struct Pic {
     command: Port<u8>,

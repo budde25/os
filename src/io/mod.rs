@@ -11,57 +11,58 @@ use cmos::Cmos;
 use core::fmt::{Arguments, Write};
 use ioapic::IOApicRef;
 use lapic::Lapic;
-use lazy_static::lazy_static;
-use pic::Pic;
-use spin::Mutex;
+use spin::{Lazy, Mutex};
 use uart::Uart;
 use vga::Vga;
 
+use self::pic::Pics;
+
 pub const IRQ_0: u8 = 32;
 
-lazy_static! {
-    static ref VGA: Mutex<Vga> = {
-        let mut writer = Vga::default();
-        writer.clear_screen();
-        Mutex::new(writer)
-    };
-    static ref UART: Mutex<Uart> = {
-        let mut uart = Uart::default();
-        unsafe { uart.init() };
-        Mutex::new(uart)
-    };
-    static ref PANIC_VGA: Mutex<Vga> = {
-        let mut writer = Vga::new_panic();
-        writer.clear_screen();
-        Mutex::new(writer)
-    };
-    static ref PIC_1: Mutex<Pic> = {
-        let pic = Pic::pic_1();
-        Mutex::new(pic)
-    };
-    static ref PIC_2: Mutex<Pic> = {
-        let pic = Pic::pic_2();
-        Mutex::new(pic)
-    };
-    static ref LAPIC: Mutex<Lapic> = {
-        let lapic = Lapic::default();
-        Mutex::new(lapic)
-    };
-    pub static ref CMOS: Mutex<Cmos> = {
-        let cmos = Cmos::default();
-        Mutex::new(cmos)
-    };
-    static ref IO_APIC: Mutex<IOApicRef> = {
-        let ioapic = IOApicRef::default();
-        Mutex::new(ioapic)
-    };
-}
+static VGA: Lazy<Mutex<Vga>> = Lazy::new(|| {
+    let mut writer = Vga::default();
+    writer.clear_screen();
+    Mutex::new(writer)
+});
+
+static UART: Lazy<Mutex<Uart>> = Lazy::new(|| {
+    let mut uart = Uart::default();
+    unsafe { uart.init() };
+    Mutex::new(uart)
+});
+
+static PANIC_VGA: Lazy<Mutex<Vga>> = Lazy::new(|| {
+    let mut writer = Vga::new_panic();
+    writer.clear_screen();
+    Mutex::new(writer)
+});
+
+static PICS: Lazy<Mutex<Pics>> = Lazy::new(|| {
+    let pics = Pics::default();
+    Mutex::new(pics)
+});
+
+static LAPIC: Lazy<Mutex<Lapic>> = Lazy::new(|| {
+    let lapic = Lapic::default();
+    Mutex::new(lapic)
+});
+
+pub static CMOS: Lazy<Mutex<Cmos>> = Lazy::new(|| {
+    let cmos = Cmos::default();
+    Mutex::new(cmos)
+});
+
+static IO_APIC: Lazy<Mutex<IOApicRef>> = Lazy::new(|| {
+    let ioapic = IOApicRef::default();
+    Mutex::new(ioapic)
+});
 
 pub fn pic_init() {
-    pic_remap();
-    pic_mask();
-    //pic_disable();
-    crate::kprintln!("PIC's have been remaped, masked, and (TODO: disable?)");
+    let mut pics = PICS.lock();
+    pics.remap();
+    pics.mask_all();
+    pics.disable();
+    crate::kprintln!("PIC's have been remaped, masked, and disabled");
 }
 
 pub fn lapic_init() {
@@ -79,15 +80,6 @@ pub fn lapic_init() {
     }
 }
 
-pub fn pic_eoi(index: usize) {
-    // we always send it to the master but the slave too if it came from there
-    if index >= 8 {
-        PIC_2.lock().end_of_interrupt();
-    }
-
-    PIC_1.lock().end_of_interrupt();
-}
-
 pub fn lapic_eoi() {
     LAPIC.lock().end_of_interrupt();
 }
@@ -98,23 +90,6 @@ pub fn uart_disable() {
 
 pub fn uart_enable() {
     UART.lock().enable();
-}
-
-fn pic_remap() {
-    PIC_1.lock().remap();
-    PIC_2.lock().remap();
-}
-
-/// disables the PIC's
-fn pic_disable() {
-    PIC_1.lock().disable();
-    PIC_2.lock().disable();
-}
-
-/// mask all values
-fn pic_mask() {
-    PIC_1.lock().set_mask_all();
-    PIC_2.lock().set_mask_all();
 }
 
 pub fn ioapic_init() {
