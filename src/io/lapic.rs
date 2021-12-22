@@ -1,8 +1,6 @@
 use bitflags::bitflags;
 use core::ops::{Index, IndexMut};
 
-use crate::kdbg;
-
 bitflags! {
     struct InterruptCommand: u32 {
         const INIT     =  0x00000500;  // INIT/RESET
