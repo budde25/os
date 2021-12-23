@@ -102,12 +102,7 @@ extern "C" fn eh_personality() {
 fn panic(info: &core::panic::PanicInfo) -> ! {
     crate::kpanicprint!("Aborting: ");
     if let Some(p) = info.location() {
-        crate::kpanicprintln!(
-            "line {}, file {}: {}",
-            p.line(),
-            p.file(),
-            info.message().unwrap()
-        );
+        crate::kpanicprintln!("[{}:{}] {}", p.file(), p.line(), info.message().unwrap());
     } else {
         crate::kpanicprintln!("no information available.");
     }

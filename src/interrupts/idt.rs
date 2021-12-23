@@ -422,7 +422,7 @@ pub mod handlers {
         use crate::io::keyboard::Keyboard;
 
         let keyboard = Keyboard::new();
-        if let Some(key) = keyboard.get_key() {
+        if let Some(key) = keyboard.get_scancode() {
             crate::io::keyboard::add_scancode(key);
         }
 

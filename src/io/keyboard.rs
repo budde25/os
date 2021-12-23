@@ -1,4 +1,7 @@
+use bitflags::bitflags;
+use core::ops::Index;
 use core::pin::Pin;
+use core::sync::atomic::{AtomicU8, Ordering};
 use core::task::{Context, Poll};
 use crossbeam_queue::ArrayQueue;
 use futures_util::stream::Stream;
@@ -6,6 +9,8 @@ use futures_util::task::AtomicWaker;
 use futures_util::StreamExt;
 use port::Port;
 use spin::lazy::Lazy;
+
+use crate::kdbg;
 
 const NO: u8 = 0;
 
@@ -73,6 +78,41 @@ const SHIFT_MAP: [u8; 256] = [
     NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0x100
 ];
 
+bitflags! {
+    struct KeyboardState: u8 {
+        const NO = 0;
+        // modifers
+        const SHIFT = 1<<0;
+        const CTRL = 1<<1;
+        const ALT = 1<<2;
+        // locks
+        const CAPSLOCK = 1<<3;
+        const NUMLOCK = 1<<4;
+        const SCROLLLOCK = 1<<5;
+        // Esc
+        const E0ESC = 1<<6;
+    }
+}
+
+impl Index<u8> for KeyboardState {
+    type Output = KeyboardState;
+    fn index(&self, index: u8) -> &Self::Output {
+        match index {
+            0x1D => &Self::CTRL,
+            0x2A => &Self::SHIFT,
+            0x36 => &Self::SHIFT,
+            0x38 => &Self::ALT,
+            0x9D => &Self::CTRL,
+            0xB8 => &Self::ALT,
+            // toggle codes
+            0x3A => &Self::CAPSLOCK,
+            0x45 => &Self::NUMLOCK,
+            0x46 => &Self::SCROLLLOCK,
+            _ => panic!("invalid scancode"),
+        }
+    }
+}
+
 static SCANCODE_QUEUE: Lazy<ArrayQueue<u8>> = Lazy::new(|| ArrayQueue::new(100));
 static WAKER: AtomicWaker = AtomicWaker::new();
 
@@ -137,11 +177,84 @@ impl Keyboard {
         unsafe { self.data.read() }
     }
 
-    pub fn get_key(&self) -> Option<u8> {
-        let scan_code = self.read();
+    pub fn get_scancode(&self) -> Option<u8> {
+        let scancode = self.read();
+        Some(scancode)
+    }
 
-        let key = NORMAL_MAP[scan_code as usize];
-        Some(key)
+    pub fn parse_scancode(scancode: u8) -> Option<char> {
+        static MODIFER_STATE: AtomicU8 = AtomicU8::new(0);
+
+        let mut scancode = scancode;
+
+        if scancode == 0xE0 {
+            MODIFER_STATE.fetch_or(KeyboardState::E0ESC.bits, Ordering::Relaxed);
+            return None;
+        } else if scancode & 0x80 != 0 {
+            // key released
+            if MODIFER_STATE.load(Ordering::Relaxed) & KeyboardState::E0ESC.bits == 0 {
+                scancode &= 0x7F;
+            }
+            let mut shift_code = if scancode == 0x1D
+                || scancode == 0x2A
+                || scancode == 0x36
+                || scancode == 0x38
+                || scancode == 0x9D
+                || scancode == 0xB8
+            {
+                KeyboardState::empty()[scancode].bits
+            } else {
+                0
+            };
+            shift_code = !(shift_code | KeyboardState::E0ESC.bits);
+            MODIFER_STATE.fetch_and(shift_code, Ordering::Relaxed);
+            return None;
+        } else if MODIFER_STATE.load(Ordering::Relaxed) & KeyboardState::E0ESC.bits != 0 {
+            scancode |= 0x80;
+            MODIFER_STATE.fetch_and(!KeyboardState::E0ESC.bits, Ordering::Relaxed);
+        }
+
+        let shift_code = if scancode == 0x1D
+            || scancode == 0x2A
+            || scancode == 0x36
+            || scancode == 0x38
+            || scancode == 0x9D
+            || scancode == 0xB8
+        {
+            KeyboardState::empty()[scancode].bits
+        } else {
+            0
+        };
+
+        let toggle_code = if scancode == 0x3A || scancode == 0x45 || scancode == 0x46 {
+            KeyboardState::empty()[scancode].bits
+        } else {
+            0
+        };
+
+        MODIFER_STATE.fetch_or(shift_code, Ordering::Relaxed);
+        MODIFER_STATE.fetch_xor(toggle_code, Ordering::Relaxed);
+
+        let index = MODIFER_STATE.load(Ordering::Relaxed)
+            & (KeyboardState::CTRL | KeyboardState::SHIFT).bits;
+
+        let mut c = match index {
+            0 => NORMAL_MAP[scancode as usize],
+            1 => SHIFT_MAP[scancode as usize],
+            2 => todo!(),
+            3 => todo!(),
+            _ => unreachable!(),
+        };
+
+        if (MODIFER_STATE.load(Ordering::Relaxed) & KeyboardState::CAPSLOCK.bits) != 0 {
+            if b'a' <= c && c <= b'z' {
+                c = c.wrapping_add(b'A'.wrapping_sub(b'a'));
+            } else if b'A' <= c && c <= b'Z' {
+                c += b'a' - b'A';
+            }
+        }
+
+        Some(char::from(c))
     }
 }
 
@@ -155,7 +268,8 @@ pub async fn print_keypresses() {
     let mut scancodes = ScancodeStream::new();
 
     while let Some(scancode) = scancodes.next().await {
-        let c = char::from(scancode);
-        crate::kprint!("{}", c);
+        if let Some(c) = Keyboard::parse_scancode(scancode) {
+            crate::kprint!("{}", c);
+        }
     }
 }
