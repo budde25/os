@@ -3,7 +3,7 @@ pub mod madt;
 pub mod multiboot2;
 mod multiproc;
 
-use acpi::ACPI;
+use acpi::Acpi;
 use madt::MultiAPIC;
 use multiboot2::Multiboot;
 
@@ -15,9 +15,9 @@ lazy_static! {
         table.init();
         table
     };
-    pub static ref ACPI_TABLE: ACPI = {
+    pub static ref ACPI_TABLE: Acpi = {
         let rsdp = MULTIBOOT.rsdp_v1.unwrap();
-        let mut acpi = ACPI::new(rsdp.rsdt_address());
+        let mut acpi = Acpi::new(rsdp.rsdt_address());
         acpi.init();
         acpi
     };

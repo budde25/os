@@ -108,7 +108,7 @@ impl ACPISDTHeader {
         unsafe { core::str::from_utf8_unchecked(slice) }
     }
 
-    pub fn len(&self) -> u32 {
+    pub fn length(&self) -> u32 {
         self.length
     }
 
@@ -148,12 +148,12 @@ impl Debug for ACPISDTHeader {
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
-pub struct RSDT {
+pub struct Rsdt {
     header: ACPISDTHeader,
     pointers: [u32; 0],
 }
 
-impl RSDT {
+impl Rsdt {
     pub fn total_entries(&self) -> usize {
         (self.header.length as usize - size_of::<ACPISDTHeader>()) / 4
     }
@@ -168,7 +168,7 @@ impl RSDT {
     }
 }
 
-impl Debug for RSDT {
+impl Debug for Rsdt {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("RSDT")
             .field("header", &self.header)
@@ -177,18 +177,18 @@ impl Debug for RSDT {
 }
 
 #[derive(Debug)]
-pub struct ACPI {
-    pub rsdt: &'static RSDT,
-    pub fadt: Option<&'static FADT>,
+pub struct Acpi {
+    pub rsdt: &'static Rsdt,
+    pub fadt: Option<&'static Fadt>,
     pub madt_ptr: Option<PhysicalAddress>,
     //pub hpet: Option<&'static HPET>,
     //pub WAET: Option<&'static WAET>,
 }
 
-impl ACPI {
+impl Acpi {
     pub fn new(rsdt_ptr: PhysicalAddress) -> Self {
         Self {
-            rsdt: unsafe { &*rsdt_ptr.as_ptr::<RSDT>() },
+            rsdt: unsafe { &*rsdt_ptr.as_ptr::<Rsdt>() },
             fadt: None,
             madt_ptr: None,
         }
@@ -203,7 +203,7 @@ impl ACPI {
             //kdbg!(header);
             let signature = header.signature();
             match signature {
-                "FACP" => self.fadt = Some(unsafe { &*self.rsdt.entry(i).as_ptr::<FADT>() }),
+                "FACP" => self.fadt = Some(unsafe { &*self.rsdt.entry(i).as_ptr::<Fadt>() }),
                 "APIC" => self.madt_ptr = Some(self.rsdt.entry(i)),
                 "HPET" => {}
                 "WAET" => {}
@@ -216,7 +216,7 @@ impl ACPI {
 //spec version 1.0 - 5.2.5 https://uefi.org/sites/default/files/resources/ACPI_1.pdf
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-pub struct FADT {
+pub struct Fadt {
     header: ACPISDTHeader,
     firmware_ctrl: u32,
     dsdt: u32,

@@ -4,7 +4,7 @@ use derive_more::From;
 
 pub struct MultiAPIC {
     start_address: PhysicalAddress,
-    madt: &'static MADT,
+    madt: &'static Madt,
     index: u32,
     init: bool,
     // these are what we want
@@ -18,7 +18,7 @@ impl MultiAPIC {
     pub fn new(address: PhysicalAddress) -> Self {
         Self {
             start_address: address,
-            madt: unsafe { &*address.as_ptr::<MADT>() },
+            madt: unsafe { &*address.as_ptr::<Madt>() },
             index: 0,
             init: false,
             apic_ids: [None; 256],
@@ -41,7 +41,7 @@ impl MultiAPIC {
         self.index = size_of::<ACPISDTHeader>() as u32 + 8;
 
         let start = self.start_address;
-        while self.index < self.madt.header.len() {
+        while self.index < self.madt.header.length() {
             let header_addr = start + self.index as u64;
             let header = unsafe { *header_addr.as_ptr::<MadtEntryHeader>() };
             let item_size = (header.length - entry_header_size as u8) as u32; // minus 2 since its the size of the tag
@@ -95,13 +95,13 @@ impl MultiAPIC {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-pub struct MADT {
+pub struct Madt {
     header: ACPISDTHeader,
     lapic_addr: u32,
     flags: u32,
 }
 
-impl MADT {
+impl Madt {
     pub fn lapic(&self) -> PhysicalAddress {
         PhysicalAddress::new(self.lapic_addr.into())
     }

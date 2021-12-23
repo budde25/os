@@ -78,25 +78,31 @@ static WAKER: AtomicWaker = AtomicWaker::new();
 
 pub fn add_scancode(scancode: u8) {
     let queue = &SCANCODE_QUEUE;
-    if let Err(_) = queue.push(scancode) {
+    if queue.push(scancode).is_err() {
         crate::kprintln!("WARNING: scancode queue full; dropping keyboard input")
     } else {
         WAKER.wake();
     }
 }
 
-pub struct ScancodeSteam {
+pub struct ScancodeStream {
     _priavte: (),
 }
 
-impl ScancodeSteam {
+impl ScancodeStream {
     pub fn new() -> Self {
         assert_eq!(100, SCANCODE_QUEUE.capacity());
         Self { _priavte: () }
     }
 }
 
-impl Stream for ScancodeSteam {
+impl Default for ScancodeStream {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Stream for ScancodeStream {
     type Item = u8;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<u8>> {
@@ -106,7 +112,7 @@ impl Stream for ScancodeSteam {
             return Poll::Ready(Some(scancode));
         }
 
-        WAKER.register(&cx.waker());
+        WAKER.register(cx.waker());
         match queue.pop() {
             Some(scancode) => Poll::Ready(Some(scancode)),
             None => Poll::Pending,
@@ -146,7 +152,7 @@ impl Default for Keyboard {
 }
 
 pub async fn print_keypresses() {
-    let mut scancodes = ScancodeSteam::new();
+    let mut scancodes = ScancodeStream::new();
 
     while let Some(scancode) = scancodes.next().await {
         let c = char::from(scancode);

@@ -42,6 +42,7 @@ impl VirtualAddress {
         self.0 == 0
     }
 
+    #[must_use]
     pub fn align_down<U>(self, align: U) -> Self
     where
         U: Into<u64>,
@@ -49,6 +50,7 @@ impl VirtualAddress {
         Self(align_down(self.0, align.into()))
     }
 
+    #[must_use]
     pub fn align_up<U>(self, align: U) -> Self
     where
         U: Into<u64>,
