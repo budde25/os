@@ -10,8 +10,6 @@ use futures_util::StreamExt;
 use port::Port;
 use spin::lazy::Lazy;
 
-use crate::kdbg;
-
 const NO: u8 = 0;
 
 // Special keycodes

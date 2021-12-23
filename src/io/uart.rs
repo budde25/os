@@ -91,6 +91,10 @@ impl Uart {
             self.column = 0;
         }
 
+        if byte == b'\x08' {
+            self.column = self.column.checked_sub(2).unwrap_or(0);
+        }
+
         unsafe {
             while self.line_sts.read() & 0x20 == 0x0 {
                 core::hint::spin_loop();
@@ -103,6 +107,10 @@ impl Uart {
     fn write_string(&mut self, string: &str) {
         for byte in string.bytes() {
             self.write_byte(byte);
+            if byte == b'\x08' {
+                self.write_byte(b' ');
+                self.write_byte(b'\x08');
+            }
         }
     }
 }

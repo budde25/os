@@ -104,6 +104,7 @@ impl Vga {
 
     fn write_byte(&mut self, byte: u8) {
         match byte {
+            b'\x08' => self.backspace(),
             b'\n' => self.new_line(),
             byte => {
                 if self.column_position >= BUFFER_WIDTH {
@@ -130,7 +131,7 @@ impl Vga {
         for byte in string.bytes() {
             match byte {
                 // printable ASCII byte or newline
-                0x20..=0x7e | b'\n' => self.write_byte(byte),
+                0x20..=0x7e | b'\n' | b'\x08' => self.write_byte(byte),
                 // not part of printable ASCII range
                 _ => self.write_byte(0xfe),
             }
@@ -154,9 +155,19 @@ impl Vga {
         self.column_position = 0;
     }
 
+    fn backspace(&mut self) {
+        let blank_char = self.blank_char();
+        self.column_position = self.column_position.checked_sub(1).unwrap_or(0);
+        unsafe {
+            self.buffer
+                .get_mut_ptr(BUFFER_HEIGHT - 1, self.column_position)
+                .write_volatile(blank_char);
+        }
+    }
+
     /// clear a row with empty char, uses the set background color
     fn clear_row(&mut self, row: usize) {
-        let blank_char = Char::new(b' ', self.color_code);
+        let blank_char = self.blank_char();
         for col in 0..BUFFER_WIDTH {
             unsafe {
                 self.buffer.get_mut_ptr(row, col).write_volatile(blank_char);
@@ -168,6 +179,10 @@ impl Vga {
         for row in 0..BUFFER_HEIGHT {
             self.clear_row(row);
         }
+    }
+
+    fn blank_char(&self) -> Char {
+        Char::new(b' ', self.color_code)
     }
 }
 
