@@ -27,6 +27,7 @@ pub mod io;
 pub mod memory;
 pub mod paging;
 pub mod tables;
+pub mod task;
 
 /// Entry point for `cargo test`
 #[cfg(test)]

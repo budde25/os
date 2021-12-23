@@ -180,6 +180,10 @@ pub fn enable_interrupts() {
     unsafe { asm!("sti", options(nomem, nostack)) };
 }
 
+pub fn enable_interrupts_hlt() {
+    unsafe { asm!("sti; hlt", options(nomem, nostack)) };
+}
+
 pub fn halt() {
     unsafe { asm!("hlt", options(nomem, nostack, preserves_flags)) };
 }

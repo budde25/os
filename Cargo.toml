@@ -12,6 +12,9 @@ arrayvec = { default-features = false, version = "0.7.1"}
 lazy_static = { features = ["spin_no_std"], version = "1.4.0"}
 volatile = "0.4.4"
 derive_more = "0.99"
+crossbeam-queue = { default-features = false, features = ["alloc"], version="0.3.2"}
+futures-util = {default-features = false, features = ["alloc"], version = "0.3.4"}
+
 # local libs
 port = { path = "lib/port" }
 block-alloc = { git = "ssh://git@github.com/budde25/alloc.git" }

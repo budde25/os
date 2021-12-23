@@ -28,6 +28,7 @@ mod io;
 mod memory;
 mod paging;
 mod tables;
+mod task;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -70,9 +71,24 @@ pub extern "C" fn kmain() -> ! {
 
     kprintln!("Current time: {}", io::CMOS.lock().time());
 
+    use task::executor::Executor;
+    use task::Task;
+
     kprintln!("Hello World");
 
-    interrupts::halt_loop();
+    let mut executor = Executor::new();
+    executor.spawn(Task::new(example_task()));
+    executor.spawn(Task::new(io::keyboard::print_keypresses()));
+    executor.run();
+}
+
+async fn async_number() -> u32 {
+    42
+}
+
+async fn example_task() {
+    let number = async_number().await;
+    kprintln!("async number: {}", number);
 }
 
 #[lang = "eh_personality"]

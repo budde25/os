@@ -423,7 +423,7 @@ pub mod handlers {
 
         let keyboard = Keyboard::new();
         if let Some(key) = keyboard.get_key() {
-            crate::kprint!("{}", key);
+            crate::io::keyboard::add_scancode(key);
         }
 
         crate::io::lapic_eoi();
