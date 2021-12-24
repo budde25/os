@@ -157,7 +157,7 @@ impl Vga {
 
     fn backspace(&mut self) {
         let blank_char = self.blank_char();
-        self.column_position = self.column_position.checked_sub(1).unwrap_or(0);
+        self.column_position = self.column_position.saturating_sub(1);
         unsafe {
             self.buffer
                 .get_mut_ptr(BUFFER_HEIGHT - 1, self.column_position)

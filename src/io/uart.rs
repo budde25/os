@@ -92,7 +92,7 @@ impl Uart {
         }
 
         if byte == b'\x08' {
-            self.column = self.column.checked_sub(2).unwrap_or(0);
+            self.column = self.column.saturating_sub(2);
         }
 
         unsafe {

@@ -245,9 +245,9 @@ impl Keyboard {
         };
 
         if (MODIFER_STATE.load(Ordering::Relaxed) & KeyboardState::CAPSLOCK.bits) != 0 {
-            if b'a' <= c && c <= b'z' {
+            if (b'a'..=b'z').contains(&c) {
                 c = c.wrapping_add(b'A'.wrapping_sub(b'a'));
-            } else if b'A' <= c && c <= b'Z' {
+            } else if (b'A'..=b'Z').contains(&c) {
                 c += b'a' - b'A';
             }
         }
