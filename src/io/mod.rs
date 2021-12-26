@@ -1,4 +1,5 @@
 pub mod cmos;
+pub mod colors;
 pub mod console;
 pub mod ioapic;
 pub mod keyboard;

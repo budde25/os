@@ -28,9 +28,11 @@ where
     T: Fn(),
 {
     fn run(&self) {
-        kprint!("{}...\t", core::any::type_name::<T>());
+        use crate::io::colors::{GREEN, NC};
+
+        kprint!("{:60}", core::any::type_name::<T>());
         self();
-        kprintln!("[ok]");
+        kprintln!("{GREEN}[Ok]{NC}");
     }
 }
 
@@ -71,16 +73,19 @@ pub fn test_runner(tests: &[&dyn Testable]) {
 
 #[cfg(test)]
 pub fn test_runner(tests: &[&dyn Testable]) {
+    use crate::io::colors::{GREEN, NC};
     kprintln!("Running {} tests", tests.len());
     for test in tests {
         test.run();
     }
+    kprintln!("{GREEN}{} tests passed!{NC}", tests.len());
     exit_qemu(true)
 }
 
 pub fn test_panic_handler(info: &core::panic::PanicInfo) -> ! {
-    crate::kpanicprintln!("[failed]\n");
-    crate::kpanicprintln!("Error: {}\n", info);
+    use crate::io::colors::{NC, RED};
+    crate::kpanicprintln!("{RED}[failed]\n");
+    crate::kpanicprintln!("Error: {}{NC}\n", info);
     exit_qemu(false);
     halt_loop();
 }
