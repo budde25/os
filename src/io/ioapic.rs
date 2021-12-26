@@ -1,3 +1,4 @@
+use crate::consts::IRQ;
 use volatile::Volatile;
 
 pub struct IOApicRef(Volatile<&'static mut IOApic>);
@@ -22,7 +23,8 @@ impl IOApicRef {
         }
     }
 
-    pub fn enable(&mut self, irq: u32, cpu_num: u32) {
+    pub fn enable(&mut self, irq: IRQ, cpu_num: u32) {
+        let irq = usize::from(irq) as u32;
         // Mark interrupt edge-triggered, active high,
         // enabled, and routed to the given cpunum,
         // which happens to be that cpu's APIC ID.

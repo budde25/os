@@ -199,13 +199,14 @@ mod tests {
 
     use super::super::VGA;
 
-    #[test_case]
+    //#[test_case]
     fn test_println_simple() {
         VGA.lock().clear_screen();
         kprint!("test_vga_simple output");
     }
 
-    #[test_case]
+    //#[test_case]
+    //#[ignore = "pollutes the screen"]
     fn test_println_many() {
         VGA.lock().clear_screen();
         for _ in 0..200 {

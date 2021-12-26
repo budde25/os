@@ -5,6 +5,7 @@
 #![feature(custom_test_frameworks)]
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
+#![feature(const_mut_refs)]
 #![test_runner(crate::common::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![allow(dead_code)]
@@ -66,6 +67,8 @@ pub extern "C" fn kmain() -> ! {
     io::ioapic_init();
     // enable the heap
     memory::heap::init();
+    // enable ide driver
+    disk::ide_init();
     // enable interrupts
     interrupts::enable_interrupts();
 

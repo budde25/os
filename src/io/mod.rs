@@ -17,8 +17,6 @@ use vga::Vga;
 
 use self::pic::Pics;
 
-pub const IRQ_0: u8 = 32;
-
 static VGA: Lazy<Mutex<Vga>> = Lazy::new(|| {
     let mut writer = Vga::default();
     writer.clear_screen();
@@ -52,7 +50,7 @@ pub static CMOS: Lazy<Mutex<Cmos>> = Lazy::new(|| {
     Mutex::new(cmos)
 });
 
-static IO_APIC: Lazy<Mutex<IOApicRef>> = Lazy::new(|| {
+pub static IO_APIC: Lazy<Mutex<IOApicRef>> = Lazy::new(|| {
     let ioapic = IOApicRef::default();
     Mutex::new(ioapic)
 });
@@ -93,8 +91,9 @@ pub fn uart_enable() {
 }
 
 pub fn ioapic_init() {
+    use crate::consts::IRQ;
     IO_APIC.lock().init();
-    IO_APIC.lock().enable(1, 0);
+    IO_APIC.lock().enable(IRQ::Keyboard, 0);
 
     crate::kprintln!("IOAPIC has been initialized");
 }

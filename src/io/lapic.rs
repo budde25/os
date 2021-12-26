@@ -70,7 +70,7 @@ impl Lapic {
         use InterruptCommand as ICR;
         use Register as Reg;
 
-        let irq0 = crate::io::IRQ_0;
+        let irq0 = crate::consts::IRQ_0;
 
         // TODO don't hard code
 

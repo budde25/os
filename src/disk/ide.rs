@@ -62,17 +62,43 @@ bitflags! {
     }
 }
 
+bitflags! {
+    struct ErrorStatus: u8 {
+        const NO_ADDRESS_MARK = 0x01;
+        const TRACK_0_NOT_FOUND = 0x02;
+        const COMMAND_ABORTED = 0x04;
+        const MEDIA_CHANGE_REQUEST = 0x08;
+        const ID_MARK_NOT_FOUND = 0x10;
+        const MEDIA_CHANGED = 0x20;
+        const UNCORRECTABLE_DATA = 0x40;
+        const BAD_BLOCK = 0x80;
+    }
+}
+
+bitflags! {
+    struct Status: u8 {
+        const ERROR = 0x01;
+        const INDEX = 0x02;
+        const CORRECTED = 0x04;
+        const DRQ = 0x08;
+        const SRV = 0x10;
+        const DRIVE_FAULT = 0x20; //does not set error
+        const READY = 0x40;
+        const BUSY = 0x80;
+    }
+}
+
 pub struct Ataio {
-    data: Port<u16>,              // index 0
-    error: PortReadOnly<u16>,     // index 1
-    features: PortWriteOnly<u16>, // index 1
-    sector_count: Port<u16>,      // index 2
-    sector_number: Port<u16>,     // index 3
-    cylinder_low: Port<u16>,      // index 4
-    cylinder_high: Port<u16>,     // index 5
-    drive_head: Port<u8>,         // index 6
-    status: PortReadOnly<u8>,     // index 7
-    command: PortWriteOnly<u8>,   // index 7
+    data: Port<u16>,             // index 0
+    error: PortReadOnly<u8>,     // index 1
+    features: PortWriteOnly<u8>, // index 1
+    sector_count: Port<u8>,      // index 2
+    sector_number: Port<u8>,     // index 3
+    cylinder_low: Port<u8>,      // index 4
+    cylinder_high: Port<u8>,     // index 5
+    drive_head: Port<u8>,        // index 6
+    status: PortReadOnly<u8>,    // index 7
+    command: PortWriteOnly<u8>,  // index 7
 }
 
 impl Ataio {
@@ -91,5 +117,49 @@ impl Ataio {
         }
     }
 
-    unsafe fn read_sector(&mut self, _lba: u64, _total: u16, _buffer: &mut [u8]) {}
+    pub fn init(&mut self) -> bool {
+        use crate::consts::IRQ;
+
+        crate::io::IO_APIC.lock().enable(IRQ::Ide, 0);
+        self.wait();
+
+        let mut have_disk_1 = false;
+
+        unsafe { self.drive_head.write(0xe0 | (1 << 4)) };
+        for _ in 0..1000 {
+            if unsafe { self.status.read() } != 0 {
+                have_disk_1 = true;
+            }
+        }
+
+        unsafe { self.drive_head.write(0xe0 | (0 << 4)) };
+
+        have_disk_1
+    }
+
+    fn error(&self) -> ErrorStatus {
+        unsafe { ErrorStatus::from_bits_truncate(self.error.read()) }
+    }
+
+    fn status(&self) -> Status {
+        unsafe { Status::from_bits_truncate(self.status.read()) }
+    }
+
+    /// wait for ide disk to be ready
+    fn wait(&self) {
+        const IDE_DRDY: u8 = 0x40;
+        // FIXME: Will spin forever if disk is not present
+        loop {
+            let stat = self.status();
+            if stat.bits() & (Status::BUSY.bits() | IDE_DRDY) == IDE_DRDY {
+                break;
+            }
+        }
+    }
+}
+
+impl Default for Ataio {
+    fn default() -> Self {
+        Self::new(0x1F0)
+    }
 }
