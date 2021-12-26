@@ -56,8 +56,8 @@ pub struct DescriptorTablePointer {
 pub struct SegmentSelector(u16);
 
 impl SegmentSelector {
-    pub fn new(index: u16, level: PrivilegeLevel) -> Self {
-        SegmentSelector(index << 3 | (level as u16))
+    pub const fn new(index: u16, level: PrivilegeLevel) -> Self {
+        Self(index << 3 | (level as u16))
     }
 
     pub fn set_privilege_level(&mut self, level: PrivilegeLevel) {
@@ -134,6 +134,7 @@ lazy_static! {
         // interrupt handlers
         idt.interrupts[InterruptIndex::Timer as usize].set_handler(timer);
         idt.interrupts[InterruptIndex::Keyboard as usize].set_handler(keyboard);
+        idt.interrupts[InterruptIndex::Ide as usize].set_handler(ide);
 
         idt
     };

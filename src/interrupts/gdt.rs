@@ -3,24 +3,24 @@ use crate::interrupts::tss::TaskStateSegment;
 use crate::interrupts::DescriptorTablePointer;
 
 use super::{PrivilegeLevel, SegmentSelector};
-use arrayvec::ArrayVec;
 use bit_field::BitField;
 use bitflags::bitflags;
 use core::arch::asm;
 use core::fmt::{self, Debug, Formatter};
+use staticvec::StaticVec;
 
 #[derive(Debug, Clone, Hash)]
 #[repr(C)]
-pub struct GlobalDescriptorTable(ArrayVec<Entry, 8>);
+pub struct GlobalDescriptorTable(StaticVec<Entry, 8>);
 
 impl GlobalDescriptorTable {
-    pub fn new() -> Self {
-        let mut gdt = ArrayVec::new_const();
+    pub const fn new() -> Self {
+        let mut gdt = StaticVec::new();
         gdt.push(Entry::zero()); // push one null entry
         Self(gdt)
     }
 
-    pub fn push(&mut self, entry: Entry) -> SegmentSelector {
+    pub const fn push(&mut self, entry: Entry) -> SegmentSelector {
         let index = self.0.len();
         self.0.push(entry);
         // TODO support more then just ring0
@@ -99,7 +99,7 @@ pub struct Entry {
 }
 
 impl Entry {
-    fn zero() -> Self {
+    const fn zero() -> Self {
         Self {
             limit_1: 0,
             base_1: 0,

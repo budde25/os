@@ -6,6 +6,7 @@ use core::arch::asm;
 use core::fmt::{self, Debug, Formatter};
 use core::marker::PhantomData;
 use core::usize;
+use derive_more::From;
 
 pub trait Handler {}
 
@@ -223,11 +224,13 @@ impl Default for Options {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, From)]
 #[repr(u8)]
 pub enum InterruptIndex {
     Timer = 0,
     Keyboard = 1,
+    Com1 = 4,
+    Ide = 14,
     Error = 19,
     Spurious = 31,
 }
@@ -237,6 +240,8 @@ impl From<usize> for InterruptIndex {
         match num {
             0 => Self::Timer,
             1 => Self::Keyboard,
+            4 => Self::Com1,
+            14 => Self::Ide,
             19 => Self::Error,
             31 => Self::Spurious,
             _ => unreachable!(),
@@ -412,6 +417,8 @@ pub mod handlers {
         );
     }
 
+    // Interrupt handler
+
     /// Timer Interrupt
     pub extern "x86-interrupt" fn timer(_stack_frame: ExceptionStackFrame) {
         crate::io::lapic_eoi();
@@ -427,6 +434,10 @@ pub mod handlers {
         }
 
         crate::io::lapic_eoi();
+    }
+
+    pub extern "x86-interrupt" fn ide(_stack_frame: ExceptionStackFrame) {
+        panic!("handle ide int");
     }
 }
 
