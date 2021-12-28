@@ -3,7 +3,7 @@
 ROOT := justfile_directory()
 TARGET_DIR := justfile_directory() + "/target"
 OUTPUT_FILE := justfile_directory() + "/target/x86_64-os/debug/os"
-QEMU_ARGS := "-serial mon:stdio -smp 2 -drive file=fs.img,index=1,media=disk,format=raw -device isa-debug-exit,iobase=0xf4,iosize=0x04"
+QEMU_ARGS := "-serial mon:stdio -smp 2 -boot order=d -drive file=fs.img,index=1,media=disk,format=raw -device isa-debug-exit,iobase=0xf4,iosize=0x04"
 QEMU_ARGS_NOX := QEMU_ARGS + " -nographic"
 QEMU_TARGET := "-cdrom " + TARGET_DIR + "/os.iso"
 
@@ -43,3 +43,4 @@ test $TEST="true":
 create-img:
     # this will create a 100 MiB, MBR, Fat32 blank image
     dd if=/dev/zero of=fs.img iflag=fullblock bs=1M count=100 && sync
+    mkfs.vfat -F 32 fs.img
