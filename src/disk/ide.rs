@@ -1,127 +1,136 @@
 use bitflags::bitflags;
 use port::{Port, PortReadOnly, PortWriteOnly};
 
+struct IdeDevice {
+    _reserved: u8,     // 0 (Empty) or 1 (This Drive really exists).
+    channel: u8,       // 0 (Primary Channel) or 1 (Secondary Channel).
+    drive: u8,         // 0 (Master Drive) or 1 (Slave Drive).
+    r#type: u16,       // 0: ATA, 1:ATAPI.
+    signature: u16,    // Drive Signature
+    capabilities: u16, // Features.
+    command_sets: u32, // Command Sets Supported.
+    size: u32,         // Size in Sectors.
+    model: [u8; 41],   // Model in cstring.
+}
+
 bitflags! {
     struct Command: u8 {
-        const NOP = 0x00;
-        const CFA_REQUEST_EXTENDED_ERROR_CODE = 0x03;
-        const DATA_SET_MANAGEMENT = 0x06;
-        const DATA_SET_MANAGEMENT_XL = 0x07;
-        const DEVICE_RESET = 0x08;
-        const GET_PHYISICAL_ELEMENT_STATUS = 0x12;
-        const READ_SECTORS = 0x20;
-        const READ_SECTORS_NO_RETRY = 0x21;
-        const READ_LONG = 0x22;
-        const READ_LONG_NO_RETRY = 0x23;
-        const READ_SECTORS_EXT = 0x24;
-        const READ_DMA_EXT = 0x25;
-        const READ_DMA_QUEUED_EXT = 0x26;
-        const READ_NATIVE_MAX_ADDRESS_EXT = 0x27;
-        const READ_MULTIPLE_EXT = 0x29;
-        const READ_STERAM_DMA_EXT = 0x2A;
-        const READ_STERAM_EXT = 0x2B;
-        const READ_LONG_EXT = 0x2F;
-        const WRITE_SECTORS = 0x30;
-        const WRITE_SECTORS_NO_RETRY = 0x31;
-        const WRITE_LONG = 0x32;
-        const WRITE_LONG_NO_RETRY = 0x33;
-        const WRTIRE_SECTORS_EXT = 0x34;
-        const WRITE_DMA_EXT = 0x35;
-        const WRITE_DMA_QUEUED_EXT = 0x36;
-        const SET_MAX_ADDRESS_EXT = 0x37;
-        const CFA_WRITE_SECTORS_WITHOUT_ERASE = 0x38;
-        const WRITE_MULIPLE_EXT = 0x39;
-        const WRITE_STREAM_DMA_EXT = 0x3A;
-        const WRITE_STREAM_EXT = 0x3B;
-        const WRITE_VERIFY = 0x3C;
-        const WRITE_DMA_FUA_EXT = 0x3D;
-        const WRITE_DMA_QUEUED_FUA_EXT = 0x3E;
-        const WRITE_LOG_EXT = 0x3F;
-        const READ_VERIFY_SECTORS = 0x40;
-        const READ_VERIFY_SECTORS_NO_RETRY = 0x41;
-        const READ_VERIFY_SECTORS_EXT = 0x42;
-        const ZERO_EXT = 0x44;
-        const WRITE_UNCORRECTABLE_EXT = 0x45;
-        const READ_LOG_DMA_EXT = 0x47;
-        const ZAC_MANAGEMENT_IN = 0x4A;
-        const FORMAT_TRACK = 0x50;
-        const CONFIGURE_STREAM = 0x51;
-        const WRITE_LOG_DMA_EXT = 0x57;
-        const TRUSTED_NON_DATA = 0x5B;
-        const TRUSTED_RECEIVE = 0x5C;
-        const TRUSTED_RECEIVE_DMA = 0x5D;
-        const TRUSTED_SEND = 0x5E;
-        const TRUSTED_SEND_DMA = 0x5F;
-        const READ_FPDMA_QUEUED = 0x60;
-        const WRITE_FPDMA_QUEUED = 0x61;
-        const NXQ_NON_DATA = 0x63;
-        const SEND_FPDMA_QUEUED = 0x64;
-        const RECEIVE_FPDMA_QUEUED = 0x65;
-
-        // TODO Finish matrix https://wiki.osdev.org/ATA_Command_Matrix
+        const READ_PIO        = 0x20;
+        const READ_PIO_EXT    = 0x24;
+        const READ_DMA        = 0xC8;
+        const READ_DMA_EXT    = 0x25;
+        const WRITE_PIO       = 0x30;
+        const WRITE_PIO_EXT   = 0x34;
+        const WRITE_DMA       = 0xCA;
+        const WRITE_DMA_EXT   = 0x35;
+        const CACHE_FLUSH     = 0xE7;
+        const CACHE_FLUSH_EXT = 0xEA;
+        const PACKET          = 0xA0;
+        const IDENTIFY_PACKET = 0xA1;
+        const IDENTIFY        = 0xEC;
     }
 }
 
 bitflags! {
-    struct ErrorStatus: u8 {
-        const NO_ADDRESS_MARK = 0x01;
-        const TRACK_0_NOT_FOUND = 0x02;
-        const COMMAND_ABORTED = 0x04;
-        const MEDIA_CHANGE_REQUEST = 0x08;
-        const ID_MARK_NOT_FOUND = 0x10;
-        const MEDIA_CHANGED = 0x20;
-        const UNCORRECTABLE_DATA = 0x40;
-        const BAD_BLOCK = 0x80;
+    struct Errors: u8 {
+        const AMNF  = 0x01; // No address mark
+        const TK0NF = 0x02; // Track 0 not found
+        const ABRT  = 0x04; // Command Aborted
+        const MCR   = 0x08; // Media change request
+        const IDNF  = 0x10; // ID mark not found
+        const MC    = 0x20; // Media changed
+        const UNC   = 0x40; // Unccorrectable data
+        const BBK   = 0x80; // Bad block
     }
 }
 
 bitflags! {
     struct Status: u8 {
-        const ERROR = 0x01;
-        const INDEX = 0x02;
-        const CORRECTED = 0x04;
-        const DRQ = 0x08;
-        const SRV = 0x10;
-        const DRIVE_FAULT = 0x20; //does not set error
-        const READY = 0x40;
-        const BUSY = 0x80;
+        const ERR  = 0x01; // Error
+        const IDX  = 0x02; // Index
+        const CORR = 0x04; // Corrected data
+        const DRQ  = 0x08; // Data request ready
+        const DSC  = 0x10; // Drive seek complete
+        const DF   = 0x20; // Drive write fault (does not set error)
+        const DRDY = 0x40; // Drive ready
+        const BSY  = 0x80; // Busy
     }
 }
 
-pub struct Ataio {
-    data: Port<u16>,             // index 0
-    error: PortReadOnly<u8>,     // index 1
-    features: PortWriteOnly<u8>, // index 1
-    sector_count: Port<u8>,      // index 2
-    sector_number: Port<u8>,     // index 3
-    cylinder_low: Port<u8>,      // index 4
-    cylinder_high: Port<u8>,     // index 5
-    drive_head: Port<u8>,        // index 6
-    status: PortReadOnly<u8>,    // index 7
-    command: PortWriteOnly<u8>,  // index 7
+bitflags! {
+    struct Identify: u8 {
+        const DEVICETYPE   = 0;
+        const CYLINDERS    = 2;
+        const HEADS        = 6;
+        const SECTORS      = 12;
+        const SERIAL       = 20;
+        const MODEL        = 54;
+        const CAPABILITIES = 98;
+        const FIELDVALID   = 106;
+        const MAX_LBA      = 120;
+        const COMMANDSETS  = 164;
+        const MAX_LBA_EXT  = 200;
+    }
 }
 
-impl Ataio {
-    fn new(port: u16) -> Self {
+bitflags! {
+    struct DriveHead: u8 {
+        const SLAVE      = 0x10; // slave bit. 0 master, 1 slave
+        const RESERVED_1 = 0x20; // should be set
+        const LBA        = 0x40; // 0 chs, 1 lba
+        const RESERVED_2 = 0x80; // should be set
+    }
+}
+
+pub struct Ata {
+    primary: bool,                      // primary if true, seconday if false
+    data: Port<u16>,                    // index 0
+    error: PortReadOnly<u8>,            // index 1
+    features: PortWriteOnly<u8>,        // index 1
+    sector_count: Port<u8>,             // index 2
+    sector_number: Port<u8>,            // index 3 | LBA0
+    cylinder_low: Port<u8>,             // index 4 | LBA1
+    cylinder_high: Port<u8>,            // index 5 | LBA2
+    drive_head: Port<u8>,               // index 6
+    status: PortReadOnly<u8>,           // index 7
+    command: PortWriteOnly<u8>,         // index 7
+    alternate_status: PortReadOnly<u8>, // index control 2
+    control: PortWriteOnly<u8>,         // index control 2
+}
+
+impl Ata {
+    fn new(io_port: u16, control_port: u16, primary: bool) -> Self {
         Self {
-            data: Port::new(port),
-            error: PortReadOnly::new(port + 1),
-            features: PortWriteOnly::new(port + 1),
-            sector_count: Port::new(port + 2),
-            sector_number: Port::new(port + 3),
-            cylinder_low: Port::new(port + 4),
-            cylinder_high: Port::new(port + 5),
-            drive_head: Port::new(port + 6),
-            status: PortReadOnly::new(port + 7),
-            command: PortWriteOnly::new(port + 7),
+            primary,
+            data: Port::new(io_port),
+            error: PortReadOnly::new(io_port + 1),
+            features: PortWriteOnly::new(io_port + 1),
+            sector_count: Port::new(io_port + 2),
+            sector_number: Port::new(io_port + 3),
+            cylinder_low: Port::new(io_port + 4),
+            cylinder_high: Port::new(io_port + 5),
+            drive_head: Port::new(io_port + 6),
+            status: PortReadOnly::new(io_port + 7),
+            command: PortWriteOnly::new(io_port + 7),
+            // control port
+            alternate_status: PortReadOnly::new(control_port + 2),
+            control: PortWriteOnly::new(control_port + 2),
         }
+    }
+
+    pub fn new_primary() -> Self {
+        Self::new(0x1f0, 0x3f6, true)
+    }
+
+    pub fn new_secondary() -> Self {
+        Self::new(0x170, 0x376, false)
     }
 
     pub fn init(&mut self) -> bool {
         use crate::consts::IRQ;
 
         crate::io::IO_APIC.lock().enable(IRQ::Ide, 0);
-        self.wait();
+        self.poll(false).unwrap();
 
         let mut have_disk_1 = false;
 
@@ -132,34 +141,170 @@ impl Ataio {
             }
         }
 
-        unsafe { self.drive_head.write(0xe0 | (0 << 4)) };
+        // switch to disk 0
+        // unsafe { self.drive_head.write(0xe0 | (0 << 4)) };
 
         have_disk_1
     }
 
-    fn error(&self) -> ErrorStatus {
-        unsafe { ErrorStatus::from_bits_truncate(self.error.read()) }
+    fn error(&self) -> Errors {
+        unsafe { Errors::from_bits_truncate(self.error.read()) }
     }
 
     fn status(&self) -> Status {
         unsafe { Status::from_bits_truncate(self.status.read()) }
     }
 
-    /// wait for ide disk to be ready
-    fn wait(&self) {
-        const IDE_DRDY: u8 = 0x40;
-        // FIXME: Will spin forever if disk is not present
-        loop {
-            let stat = self.status();
-            if stat.bits() & (Status::BUSY.bits() | IDE_DRDY) == IDE_DRDY {
-                break;
-            }
-        }
+    pub fn read(&mut self, lba: u32, buf: &mut [u16; 256]) {
+        self.setup_access(0, lba).unwrap();
+        self._read(buf).unwrap();
     }
-}
 
-impl Default for Ataio {
-    fn default() -> Self {
-        Self::new(0x1F0)
+    fn _read(&mut self, buf: &mut [u16; 256]) -> Result<(), u64> {
+        let num_sects = 1; // TODO: allow for bigger reads in the future
+        for _ in 0..num_sects {
+            self.poll(true)?;
+            unsafe { self.data.reads(buf) };
+        }
+        unsafe { self.command.write(Command::CACHE_FLUSH.bits()) };
+        self.poll(false)?;
+
+        Ok(())
+    }
+
+    pub fn write(&mut self, lba: u32, buf: &[u16; 256]) {
+        self.setup_access(1, lba).unwrap();
+        self._write(buf).unwrap();
+    }
+
+    fn _write(&mut self, buf: &[u16; 256]) -> Result<(), u64> {
+        let num_sects = 1; // TODO: allow for bigger reads in the future
+        for _ in 0..num_sects {
+            self.poll(false)?;
+            unsafe { self.data.writes(buf) };
+        }
+        unsafe { self.command.write(Command::CACHE_FLUSH.bits()) };
+        self.poll(false)?;
+
+        Ok(())
+    }
+
+    fn setup_access(&mut self, direction: u8, lba: u32) -> Result<(), u64> {
+        let lba_mode: u8; // 0: CHS, 1: LBA28, 2: LBA48
+        let mut lba_io: [u8; 6] = [0; 6];
+        let slavebit = 1; // 0 master, 1 slave
+        let head: u8;
+        let num_sects = 1;
+
+        // disable iqs
+        self.disable_irq();
+
+        // select lba mode
+        if lba >= 0x10000000 {
+            // TODO: support lba48
+            panic!("TODO support lba48")
+        } else {
+            // lba28
+            lba_mode = 1;
+            lba_io[0] = ((lba & 0x00000FF) >> 0) as u8;
+            lba_io[1] = ((lba & 0x000FF00) >> 8) as u8;
+            lba_io[2] = ((lba & 0x0FF0000) >> 16) as u8;
+            lba_io[3] = 0; // These Registers are not used here.
+            lba_io[4] = 0; // These Registers are not used here.
+            lba_io[5] = 0; // These Registers are not used here.
+            head = ((lba & 0xF000000) >> 24) as u8;
+        }
+        // TODO: support chs
+
+        let dma = 0; // TODO: support DMA
+
+        // Wait if busy
+        while self.status().contains(Status::BSY) {}
+
+        // select drive
+        if lba_mode == 0 {
+            // drive and chs
+            unsafe { self.drive_head.write(0xA0 | (slavebit << 4) | head) };
+        } else {
+            // drive and lba
+            unsafe { self.drive_head.write(0xE0 | (slavebit << 4) | head) };
+        }
+
+        // write params
+        unsafe {
+            if lba_mode == 2 {
+                self.sector_count.write(0);
+                // self.write(ATA_REG_LBA3, lba_io[3]);
+                // self.write(ATA_REG_LBA4, lba_io[4]);
+                // self.write(ATA_REG_LBA5, lba_io[5]);
+            }
+            self.sector_count.write(num_sects);
+            self.sector_number.write(lba_io[0]);
+            self.cylinder_low.write(lba_io[1]);
+            self.cylinder_high.write(lba_io[2]);
+        }
+
+        // Routine that is followed:
+        // If ( DMA & LBA48)   DO_DMA_EXT;
+        // If ( DMA & LBA28)   DO_DMA_LBA;
+        // If ( DMA & LBA28)   DO_DMA_CHS;
+        // If (!DMA & LBA48)   DO_PIO_EXT;
+        // If (!DMA & LBA28)   DO_PIO_LBA;
+        // If (!DMA & !LBA#)   DO_PIO_CHS;
+        let cmd = match (lba_mode, dma, direction) {
+            (0, 0, 0) => Command::READ_PIO,
+            (1, 0, 0) => Command::READ_PIO,
+            (2, 0, 0) => Command::READ_PIO_EXT,
+            (0, 1, 0) => Command::READ_DMA,
+            (1, 1, 0) => Command::READ_DMA,
+            (2, 1, 0) => Command::READ_DMA_EXT,
+            (0, 0, 1) => Command::WRITE_PIO,
+            (1, 0, 1) => Command::WRITE_PIO,
+            (2, 0, 1) => Command::WRITE_PIO_EXT,
+            (0, 1, 1) => Command::WRITE_DMA,
+            (1, 1, 1) => Command::WRITE_DMA,
+            (2, 1, 1) => Command::WRITE_DMA_EXT,
+            _ => unreachable!(),
+        };
+        unsafe { self.command.write(cmd.bits()) };
+
+        Ok(())
+    }
+
+    pub fn disable_irq(&mut self) {
+        unsafe { self.control.write(0x2) };
+    }
+
+    fn enable_irq(&mut self) {}
+
+    // TODO proper errors handling
+    fn poll(&mut self, advanced: bool) -> Result<(), u64> {
+        // delay for 400 nanoseconds
+        for _ in 0..4 {
+            unsafe { self.alternate_status.read() }; // wastes 100ns
+        }
+
+        // wait for BSY to be cleared
+        while self.status().contains(Status::BSY) {}
+
+        if !advanced {
+            return Ok(());
+        }
+
+        let status = self.status();
+        if status.contains(Status::ERR) {
+            return Err(2);
+        }
+
+        if status.contains(Status::DF) {
+            return Err(1);
+        }
+
+        // BSY = 0; DF = 0; ERR = 0 so we should check for DRQ now
+        if !status.contains(Status::DRQ) {
+            return Err(3); // DRQ should be set
+        }
+
+        Ok(())
     }
 }

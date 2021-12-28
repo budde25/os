@@ -437,7 +437,10 @@ pub mod handlers {
     }
 
     pub extern "x86-interrupt" fn ide(_stack_frame: ExceptionStackFrame) {
-        panic!("handle ide int");
+        // TODO: no printing in an interrupt handler else deadlock
+        crate::kprintln!("WARNING: handle ide int");
+
+        crate::io::lapic_eoi();
     }
 }
 
