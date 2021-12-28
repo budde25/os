@@ -43,4 +43,4 @@ test $TEST="true":
 create-img:
     # this will create a 100 MiB, MBR, Fat32 blank image
     dd if=/dev/zero of=fs.img iflag=fullblock bs=1M count=100 && sync
-    mkfs.vfat -F 32 fs.img
+    mkfs.ext2 fs.img
