@@ -1,4 +1,5 @@
 use bitflags::bitflags;
+use conquer_once::spin::OnceCell;
 use core::ops::Index;
 use core::pin::Pin;
 use core::sync::atomic::{AtomicU8, Ordering};
@@ -8,7 +9,6 @@ use futures_util::stream::Stream;
 use futures_util::task::AtomicWaker;
 use futures_util::StreamExt;
 use port::Port;
-use spin::lazy::Lazy;
 
 const NO: u8 = 0;
 
@@ -111,15 +111,18 @@ impl Index<u8> for KeyboardState {
     }
 }
 
-static SCANCODE_QUEUE: Lazy<ArrayQueue<u8>> = Lazy::new(|| ArrayQueue::new(100));
+static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 static WAKER: AtomicWaker = AtomicWaker::new();
 
 pub fn add_scancode(scancode: u8) {
-    let queue = &SCANCODE_QUEUE;
-    if queue.push(scancode).is_err() {
-        crate::kprintln!("WARNING: scancode queue full; dropping keyboard input")
+    if let Ok(queue) = SCANCODE_QUEUE.try_get() {
+        if queue.push(scancode).is_err() {
+            crate::kprintln!("WARNING: scancode queue full; dropping keyboard input")
+        } else {
+            WAKER.wake();
+        }
     } else {
-        WAKER.wake();
+        crate::kprintln!("WARNING: scancode queue uninitialized");
     }
 }
 
@@ -129,7 +132,9 @@ pub struct ScancodeStream {
 
 impl ScancodeStream {
     pub fn new() -> Self {
-        assert_eq!(100, SCANCODE_QUEUE.capacity());
+        SCANCODE_QUEUE
+            .try_init_once(|| ArrayQueue::new(100))
+            .expect("ScancodeStream::new should only be called once");
         Self { _priavte: () }
     }
 }
@@ -144,7 +149,9 @@ impl Stream for ScancodeStream {
     type Item = u8;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<u8>> {
-        let queue = &SCANCODE_QUEUE;
+        let queue = SCANCODE_QUEUE
+            .try_get()
+            .expect("ScancodeStream: not initialized");
 
         if let Some(scancode) = queue.pop() {
             return Poll::Ready(Some(scancode));
