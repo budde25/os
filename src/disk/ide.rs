@@ -206,7 +206,7 @@ impl Ata {
         } else {
             // lba28
             lba_mode = 1;
-            lba_io[0] = ((lba & 0x00000FF) >> 0) as u8;
+            lba_io[0] = (lba & 0x00000FF) as u8;
             lba_io[1] = ((lba & 0x000FF00) >> 8) as u8;
             lba_io[2] = ((lba & 0x0FF0000) >> 16) as u8;
             lba_io[3] = 0; // These Registers are not used here.
