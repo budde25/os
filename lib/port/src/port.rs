@@ -13,6 +13,9 @@ pub trait PortWrite {
     /// # Safety
     /// This function is unsafe
     unsafe fn write(port: u16, value: Self);
+    unsafe fn writes(port: u16, buf: &[Self])
+    where
+        Self: Sized;
 }
 
 /// A port write trait that lets you read data to a port
@@ -21,6 +24,9 @@ pub trait PortRead {
     /// # Safety
     /// This function is unsafe
     unsafe fn read(port: u16) -> Self;
+    unsafe fn reads(port: u16, buf: &mut [Self])
+    where
+        Self: Sized;
 }
 
 mod hidden {
@@ -103,6 +109,12 @@ impl<T: PortWrite, A: PortWriteAccess> PortGeneric<T, A> {
     pub unsafe fn write(&mut self, value: T) {
         T::write(self.port, value);
     }
+
+    /// # Safety
+    /// This cuntion is unsafe
+    pub unsafe fn writes(&mut self, value: &[T]) {
+        T::writes(self.port, value);
+    }
 }
 
 impl<T: PortRead, A: PortReadAccess> PortGeneric<T, A> {
@@ -110,6 +122,12 @@ impl<T: PortRead, A: PortReadAccess> PortGeneric<T, A> {
     /// This function is unsafe
     pub unsafe fn read(&self) -> T {
         T::read(self.port)
+    }
+
+    /// # Safety
+    /// This cuntion is unsafe
+    pub unsafe fn reads(&mut self, value: &mut [T]) {
+        T::reads(self.port, value);
     }
 }
 
@@ -137,11 +155,25 @@ impl PortRead for u8 {
         asm!("in al, dx", out("al") output, in("dx") port, options(nomem, nostack, preserves_flags));
         output
     }
+
+    unsafe fn reads(port: u16, buf: &mut [Self])
+    where
+        Self: Sized,
+    {
+        asm!("rep insb", in("dx") port, in("ecx") buf.len(), in("edi") buf.as_ptr());
+    }
 }
 
 impl PortWrite for u8 {
     unsafe fn write(port: u16, value: Self) {
         asm!("out dx, al", in("dx") port, in("al") value, options(nomem, nostack, preserves_flags));
+    }
+
+    unsafe fn writes(port: u16, buf: &[Self])
+    where
+        Self: Sized,
+    {
+        asm!("rep outsb", in("dx") port, in("ecx") buf.len(), in("esi") buf.as_ptr());
     }
 }
 
@@ -151,11 +183,25 @@ impl PortRead for u16 {
         asm!("in ax, dx", out("ax") output, in("dx") port, options(nomem, nostack, preserves_flags));
         output
     }
+
+    unsafe fn reads(port: u16, buf: &mut [Self])
+    where
+        Self: Sized,
+    {
+        asm!("rep insw", in("dx") port, in("ecx") buf.len(), in("edi") buf.as_ptr());
+    }
 }
 
 impl PortWrite for u16 {
     unsafe fn write(port: u16, value: Self) {
         asm!("out dx, ax", in("dx") port, in("ax") value, options(nomem, nostack, preserves_flags));
+    }
+
+    unsafe fn writes(port: u16, buf: &[Self])
+    where
+        Self: Sized,
+    {
+        asm!("rep outsw", in("dx") port, in("ecx") buf.len(), in("esi") buf.as_ptr());
     }
 }
 
@@ -165,10 +211,24 @@ impl PortRead for u32 {
         asm!("in eax, dx", out("eax") output, in("dx") port, options(nomem, nostack, preserves_flags));
         output
     }
+
+    unsafe fn reads(port: u16, buf: &mut [Self])
+    where
+        Self: Sized,
+    {
+        asm!("rep insd", in("dx") port, in("ecx") buf.len(), in("edi") buf.as_ptr());
+    }
 }
 
 impl PortWrite for u32 {
     unsafe fn write(port: u16, value: Self) {
         asm!("out dx, eax", in("dx") port, in("eax") value, options(nomem, nostack, preserves_flags));
+    }
+
+    unsafe fn writes(port: u16, buf: &[Self])
+    where
+        Self: Sized,
+    {
+        asm!("rep outsd", in("dx") port, in("ecx") buf.len(), in("esi") buf.as_ptr());
     }
 }
