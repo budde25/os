@@ -162,7 +162,7 @@ map_p2_table:
 # https://os.phil-opp.com/entering-longmode/
 enable_paging:
     # load P4 to cr3 register (cpu uses this to access the P4 table)
-    mov eax, p4_table
+    mov eax, offset p4_table
     mov cr3, eax
 
     # enable PAE-flag in cr4 (Physical Address Extension)
