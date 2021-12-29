@@ -20,6 +20,15 @@ SECTIONS
         *(.text*)
         __text_end = .;
     }
+
+    .page_table_2 : ALIGN(4K) 
+    {
+        __page_table_2_start = .;
+        . += 4096; /* p3 table */
+        . += 4096 * 32; /* p2 table */
+        *(.page_table_2)
+        __page_table_2_end = .;
+    }
     
     /* Read only data */
     .rodata : ALIGN(4K)
@@ -44,15 +53,6 @@ SECTIONS
         *(COMMON)
         *(.bss*)
         __bss_end = .;
-    }
-
-    .page_table_2 : ALIGN(4K) 
-    {
-        __page_table_2_start = .;
-        . += 4096; /* p3 table */
-        . += 4096 * 32; /* p2 table */
-        *(.page_table_2)
-        __page_table_2_end = .;
     }
 
     /DISCARD/ : {
