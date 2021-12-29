@@ -85,7 +85,16 @@ pub fn test_runner(tests: &[&dyn Testable]) {
 pub fn test_panic_handler(info: &core::panic::PanicInfo) -> ! {
     use crate::io::colors::{NC, RED};
     crate::kpanicprintln!("{RED}[failed]\n");
-    crate::kpanicprintln!("Error: {}{NC}\n", info);
+    if let Some(p) = info.location() {
+        crate::kpanicprintln!(
+            "[{}:{}] {}{NC}",
+            p.file(),
+            p.line(),
+            info.message().unwrap()
+        );
+    } else {
+        crate::kpanicprintln!("no information available.");
+    }
     exit_qemu(false);
     halt_loop();
 }
