@@ -53,8 +53,18 @@ impl Cr3 {
         Self { frame, flags }
     }
 
+    pub unsafe fn write(frame: PhysFrame, flags: Cr3Flags) {
+        let addr = frame.address();
+        let value = u64::from(addr) | flags.bits() as u64;
+        asm!("mov cr3, {}", in(reg) value, options(nostack, preserves_flags));
+    }
+
     pub fn frame(&self) -> PhysFrame {
         self.frame
+    }
+
+    pub fn flags(&self) -> Cr3Flags {
+        self.flags
     }
 }
 

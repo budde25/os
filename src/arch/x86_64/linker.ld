@@ -5,13 +5,6 @@ SECTIONS
     /* Conventional starting place */
     . = 1M;
 
-    .page_table : ALIGN(4K) 
-    {
-        __page_table_start = .;
-        *(.page_table)
-        __page_table_end = .;
-    }
-    
     /* Start with multiboot then .text */
     .text : ALIGN(4K)
     {
@@ -19,6 +12,13 @@ SECTIONS
         *(.multiboot)
         *(.text*)
         __text_end = .;
+    }
+
+    .page_table : ALIGN(4K) 
+    {
+        __page_table_start = .;
+        *(.page_table)
+        __page_table_end = .;
     }
 
     .page_table_2 : ALIGN(4K) 
