@@ -18,3 +18,7 @@ pub const IRQ_0: u8 = 32;
 
 // IRQ offset table
 pub use crate::interrupts::idt::InterruptIndex as IRQ;
+
+//
+pub const ROOTINO: usize = 1; // root i node number
+pub const BSIZE: usize = 512;

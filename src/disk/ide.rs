@@ -1,5 +1,10 @@
 use bitflags::bitflags;
+use conquer_once::spin::OnceCell;
+use crossbeam_queue::ArrayQueue;
+use futures_util::task::AtomicWaker;
 use port::{Port, PortReadOnly, PortWriteOnly};
+
+use super::buf::Buffer;
 
 struct IdeDevice {
     _reserved: u8,     // 0 (Empty) or 1 (This Drive really exists).
@@ -272,7 +277,7 @@ impl Ata {
     }
 
     pub fn disable_irq(&mut self) {
-        unsafe { self.control.write(0x2) };
+        unsafe { self.control.write(2) };
     }
 
     fn enable_irq(&mut self) {}
@@ -308,3 +313,15 @@ impl Ata {
         Ok(())
     }
 }
+
+// static IDE_QUEUE: OnceCell<ArrayQueue<Buffer>> = OnceCell::uninit();
+// static WAKER: AtomicWaker = AtomicWaker::new();
+
+// pub async fn page_handler() {
+//     let mut buffers = BufferSteam::new();
+//     // TODO: check to muck sure we have a lock on it
+
+//     while let Some(buf) = buffers.next().await {
+//         // read data if needed
+//     }
+// }
