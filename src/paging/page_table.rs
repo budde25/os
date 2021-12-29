@@ -45,7 +45,7 @@ impl PageTableEntry {
     }
 
     pub fn set_flags(&mut self, flags: PageFlags) {
-        self.0 &= flags.bits;
+        self.0 |= flags.bits();
     }
 
     pub fn is_present(&self) -> bool {

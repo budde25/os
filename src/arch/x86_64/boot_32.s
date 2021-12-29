@@ -154,7 +154,8 @@ map_p2_table:
     mov dword ptr [p2_table + ecx * 8], eax # map ecx-th entry
 
     inc ecx            # increase counter
-    cmp ecx, 512       # if counter == 512, the whole P2 table is mapped
+    cmp ecx, 9         # # if counter == 512, the whole P2 table is mapped
+                       # only identity map up until 0x120_0000 we will allocate as needed from then on 
     jne map_p2_table   # else map the next entry
 
     ret

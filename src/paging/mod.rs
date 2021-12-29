@@ -54,3 +54,48 @@ pub fn map_all_physical_memory() {
     }
     crate::kprintln!("All physical memory as been mapped");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::kprintln;
+
+    // #[test_case]
+    pub fn debug_print_p4_table() {
+        let m = MAPPER.lock();
+        let p4 = m.p4();
+
+        for (i, entry) in p4.iter().enumerate() {
+            if !entry.is_unused() {
+                kprintln!("L4 Entry {}: {:#?}", i, entry);
+            }
+        }
+    }
+
+    // #[test_case]
+    pub fn debug_print_p3_table() {
+        let m = MAPPER.lock();
+        let p4 = m.p4();
+        let p3 = p4.next_table(0).unwrap();
+
+        for (i, entry) in p3.iter().enumerate() {
+            if !entry.is_unused() {
+                kprintln!("L3 Entry {}: {:#?}", i, entry);
+            }
+        }
+    }
+
+    //#[test_case]
+    pub fn debug_print_p2_table() {
+        let m = MAPPER.lock();
+        let p4 = m.p4();
+        let p3 = p4.next_table(0).unwrap();
+        let p2 = p3.next_table(0).unwrap();
+
+        for (i, entry) in p2.iter().enumerate() {
+            if !entry.is_unused() {
+                kprintln!("L2 Entry {}: {:#?}", i, entry);
+            }
+        }
+    }
+}

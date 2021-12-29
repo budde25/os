@@ -49,15 +49,15 @@ pub extern "C" fn kmain() -> ! {
     // we should start with this to avoid errors with physical addrs
     paging::map_all_physical_memory();
 
+    // Load GDT and IDT
+    interrupts::init();
+
     // log that we are starting
     if let Some(name) = tables::MULTIBOOT.boot_loader_name {
         kprintln!("Booting from: {}", name.string())
     }
 
     kprintln!("Number of cores: {}", tables::MADT_TABLE.num_cores());
-
-    // Load GDT and IDT
-    interrupts::init();
 
     // enable the lapic
     io::lapic_init();
@@ -69,6 +69,8 @@ pub extern "C" fn kmain() -> ! {
     memory::heap::init();
     // enable ide driver
     disk::ide_init();
+
+    // disk::ide_test();
     // enable interrupts
     interrupts::enable_interrupts();
 
@@ -80,18 +82,8 @@ pub extern "C" fn kmain() -> ! {
     kprintln!("Hello World");
 
     let mut executor = Executor::new();
-    executor.spawn(Task::new(example_task()));
     executor.spawn(Task::new(io::keyboard::print_keypresses()));
     executor.run();
-}
-
-async fn async_number() -> u32 {
-    42
-}
-
-async fn example_task() {
-    let number = async_number().await;
-    kprintln!("async number: {}", number);
 }
 
 #[lang = "eh_personality"]

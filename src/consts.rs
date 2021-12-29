@@ -2,12 +2,11 @@
 pub const KERNEL_OFFSET: u64 = 0xFFFF_8000_0000_0000;
 
 // HEAP
-pub const HEAP_START: u64 = 0x1000000;
-pub const HEAP_SIZE: u64 = 100 * 1024; // 100 KiB
+pub const HEAP_START: u64 = 0x100_0000;
+pub const HEAP_SIZE: u64 = 2 * SIZE_1MIB; // 2 MiB
 
 // KHEAP
-pub const KHEAP: u64 = HEAP_SIZE + HEAP_SIZE;
-pub const KHEAP_SIZE: u64 = 256 * 4096;
+pub const KHEAP_START: u64 = HEAP_START + HEAP_SIZE;
 
 // SIZES
 pub const SIZE_1KIB: u64 = 0x1000;

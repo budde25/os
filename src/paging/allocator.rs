@@ -1,6 +1,11 @@
+use crate::consts::{KHEAP_START, SIZE_1KIB};
 use crate::paging::page_table::{Level4, PageTable};
 use crate::paging::phys_frame::PhysFrame;
 use crate::{arch::x86_64::registers::Cr3, VirtualAddress};
+use crate::{kdbg, PhysicalAddress};
+use core::sync::atomic::{AtomicU64, Ordering};
+
+use super::page_table::PageFlags;
 
 pub struct FreeList {
     list: [PhysFrame; 256],
@@ -40,7 +45,25 @@ impl Mapper {
 
 impl Allocator for Mapper {
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
-        None
+        // TODO: support larger allocations
+        let p3 = self.p4_mut().next_table_mut(0).expect("Invalid frame");
+        let p2 = p3.next_table_mut(0).expect("Invalid frame");
+        for item in p2.iter_mut() {
+            if item.is_unused() {
+                // TODO: this will not allow a dealloc to actually reclaim any memory
+                static ADDR: AtomicU64 = AtomicU64::new(KHEAP_START);
+                // found one now allocate
+                item.set_address(
+                    PhysicalAddress::new(ADDR.fetch_add(SIZE_1KIB, Ordering::Relaxed)),
+                    PageFlags::PRESENT | PageFlags::WRITEABLE,
+                );
+                kdbg!(&item);
+                return item.frame();
+            }
+        }
+        // for now lets panic to be aware of our usage
+        // later we will return none
+        panic!("PageTable out of memory!");
     }
 
     fn dealloc_frame(&mut self, frame: PhysFrame) {
