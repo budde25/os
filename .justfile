@@ -25,7 +25,11 @@ run:
 cargo-run target:
     #!/usr/bin/env sh
     just build {{target}}
-    qemu-system-x86_64 {{QEMU_ARGS}} {{QEMU_TARGET}}
+    if [ "$TEST" == "true" ]; then
+        qemu-system-x86_64 {{QEMU_ARGS_NOX}} {{QEMU_TARGET}}
+    else
+        qemu-system-x86_64 {{QEMU_ARGS}} {{QEMU_TARGET}}
+    fi
     status=$?
     # return status if test
     if [ "$TEST" == "true" ]; then
