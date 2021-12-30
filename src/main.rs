@@ -20,7 +20,6 @@ pub use address::VirtualAddress;
 extern crate alloc;
 
 mod address;
-mod registers;
 mod common;
 mod consts;
 mod disk;
@@ -29,6 +28,7 @@ mod io;
 mod memory;
 mod paging;
 mod proc;
+mod registers;
 mod tables;
 mod task;
 
@@ -71,7 +71,7 @@ pub extern "C" fn kmain() -> ! {
     // enable ide driver
     disk::ide_init();
 
-    kprintln!("Current time: {}", io::CMOS.lock().time());
+    kprintln!("Current time: {}", io::current_time());
 
     // start addional processors
     ap_startup();

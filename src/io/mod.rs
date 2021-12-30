@@ -17,6 +17,7 @@ use spin::{Lazy, Mutex};
 use uart::Uart;
 use vga::Vga;
 
+use self::cmos::RtcDate;
 use self::pic::Pics;
 
 static VGA: Lazy<Mutex<Vga>> = Lazy::new(|| {
@@ -50,10 +51,7 @@ pub static mut LAPIC: Lazy<Lapic> = Lazy::new(|| Lapic::default());
 /// must be initalized once
 pub static mut IO_APIC: Lazy<IoApic> = Lazy::new(|| IoApic::default());
 
-pub static CMOS: Lazy<Mutex<Cmos>> = Lazy::new(|| {
-    let cmos = Cmos::default();
-    Mutex::new(cmos)
-});
+pub static mut CMOS: Cmos = Cmos::new();
 
 pub fn pic_init() {
     let mut pics = PICS.lock();
@@ -114,6 +112,10 @@ pub fn ioapic_init() {
     }
 
     crate::kprintln!("IOAPIC has been initialized");
+}
+
+pub fn current_time() -> RtcDate {
+    unsafe { CMOS.time() }
 }
 
 #[macro_export]

@@ -228,10 +228,11 @@ pub struct Cmos {
 }
 
 impl Cmos {
-    pub fn new(num: u16) -> Self {
+    pub const fn new() -> Self {
+        const PORT_NUM: u16 = 0x70;
         Self {
-            command: PortWriteOnly::new(num),
-            data: PortReadOnly::new(num + 1),
+            command: PortWriteOnly::new(PORT_NUM),
+            data: PortReadOnly::new(PORT_NUM + 1),
         }
     }
 
@@ -280,6 +281,6 @@ impl Cmos {
 
 impl Default for Cmos {
     fn default() -> Self {
-        Self::new(0x70)
+        Self::new()
     }
 }
