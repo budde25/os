@@ -86,7 +86,7 @@ pub type PortReadOnly<T> = PortGeneric<T, ReadOnlyAccess>;
 pub type PortWriteOnly<T> = PortGeneric<T, WriteOnlyAccess>;
 
 impl<T, A> PortGeneric<T, A> {
-    pub fn new(port: u16) -> Self {
+    pub const fn new(port: u16) -> Self {
         Self {
             port,
             _type: PhantomData,
@@ -94,11 +94,11 @@ impl<T, A> PortGeneric<T, A> {
         }
     }
 
-    pub fn port(&self) -> u16 {
+    pub const fn port(&self) -> u16 {
         self.port
     }
 
-    pub fn size(&self) -> usize {
+    pub const fn size(&self) -> usize {
         core::mem::size_of::<T>()
     }
 }
