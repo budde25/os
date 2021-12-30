@@ -364,7 +364,7 @@ pub mod handlers {
         stack_frame: ExceptionStackFrame,
         error_code: PageFaultErrorCode,
     ) {
-        use crate::arch::x86_64::registers::Cr2;
+        use crate::registers::control::Cr2;
 
         kprintln!("EXCEPTION: PAGE FAULT");
         kprintln!("Accessed Address: {:?}", Cr2::read());

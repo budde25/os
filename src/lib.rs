@@ -20,7 +20,6 @@ extern crate alloc;
 
 // pub so we can use them in integration tests
 pub mod address;
-pub mod arch;
 pub mod common;
 pub mod consts;
 pub mod disk;
@@ -29,6 +28,7 @@ pub mod io;
 pub mod memory;
 pub mod paging;
 pub mod proc;
+pub mod registers;
 pub mod tables;
 pub mod task;
 

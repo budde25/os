@@ -20,7 +20,7 @@ pub use address::VirtualAddress;
 extern crate alloc;
 
 mod address;
-mod arch;
+mod registers;
 mod common;
 mod consts;
 mod disk;

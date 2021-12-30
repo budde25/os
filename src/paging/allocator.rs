@@ -1,9 +1,9 @@
-use crate::arch::x86_64::tlb;
+use super::tlb;
 use crate::consts::{KHEAP_START, SIZE_1KIB};
 use crate::paging::page_table::{Level4, PageTable};
 use crate::paging::phys_frame::PhysFrame;
-use crate::{arch::x86_64::registers::Cr3, VirtualAddress};
 use crate::{kdbg, PhysicalAddress};
+use crate::{registers::control::Cr3, VirtualAddress};
 use core::sync::atomic::{AtomicU64, Ordering};
 
 use super::page_table::PageFlags;

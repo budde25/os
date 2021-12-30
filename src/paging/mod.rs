@@ -1,6 +1,7 @@
 pub mod allocator;
 pub mod page_table;
 pub mod phys_frame;
+pub mod tlb;
 
 use allocator::Mapper;
 use lazy_static::lazy_static;
