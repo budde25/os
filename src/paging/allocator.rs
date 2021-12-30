@@ -1,3 +1,4 @@
+use crate::arch::x86_64::tlb;
 use crate::consts::{KHEAP_START, SIZE_1KIB};
 use crate::paging::page_table::{Level4, PageTable};
 use crate::paging::phys_frame::PhysFrame;
@@ -76,5 +77,6 @@ impl Allocator for Mapper {
             .next_table_mut(virt.p3_index().into())
             .expect("Invalid frame");
         p2[virt.p2_index()].set_unused();
+        tlb::flush(virt);
     }
 }
