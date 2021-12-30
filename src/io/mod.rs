@@ -10,7 +10,8 @@ pub mod vga;
 
 use cmos::Cmos;
 use core::fmt::{Arguments, Write};
-use ioapic::IOApicRef;
+use core::sync::atomic::AtomicBool;
+use ioapic::IoApic;
 use lapic::Lapic;
 use spin::{Lazy, Mutex};
 use uart::Uart;
@@ -41,19 +42,17 @@ static PICS: Lazy<Mutex<Pics>> = Lazy::new(|| {
     Mutex::new(pics)
 });
 
-static LAPIC: Lazy<Mutex<Lapic>> = Lazy::new(|| {
-    let lapic = Lapic::default();
-    Mutex::new(lapic)
-});
+/// Global local APIC, not need to may be mut static since it is unique per cpu
+/// must be initalized once
+pub static mut LAPIC: Lazy<Lapic> = Lazy::new(|| Lapic::default());
+
+/// Global IO APIC, not need to may be mut static since it is unique per cpu
+/// must be initalized once
+pub static mut IO_APIC: Lazy<IoApic> = Lazy::new(|| IoApic::default());
 
 pub static CMOS: Lazy<Mutex<Cmos>> = Lazy::new(|| {
     let cmos = Cmos::default();
     Mutex::new(cmos)
-});
-
-pub static IO_APIC: Lazy<Mutex<IOApicRef>> = Lazy::new(|| {
-    let ioapic = IOApicRef::default();
-    Mutex::new(ioapic)
 });
 
 pub fn pic_init() {
@@ -64,23 +63,30 @@ pub fn pic_init() {
     crate::kprintln!("PIC's have been remaped, masked, and disabled");
 }
 
+/// Initialze the local apic
+/// Should only be done once
 pub fn lapic_init() {
     use crate::kprintln;
 
-    LAPIC.lock().init();
-    let status = LAPIC.lock().error_status();
+    // only init once (ok to be "expensive" since we only call once")
+    static ALREADY_INIT: AtomicBool = AtomicBool::new(false);
+    if ALREADY_INIT.fetch_or(true, core::sync::atomic::Ordering::SeqCst) {
+        panic!("ioapic already init")
+    }
+
+    unsafe { Lazy::<Lapic>::force(&LAPIC) };
+
+    unsafe { (*LAPIC.as_mut_ptr()).init() };
+    let status = unsafe { LAPIC.error_status() };
+
     if status.is_empty() {
         kprintln!("LAPIC has been initialized");
     } else {
-        kprintln!(
+        panic!(
             "LAPIC initialization has failed with error(s): {:#?}",
             status
         );
     }
-}
-
-pub fn lapic_eoi() {
-    LAPIC.lock().end_of_interrupt();
 }
 
 pub fn uart_disable() {
@@ -91,10 +97,21 @@ pub fn uart_enable() {
     UART.lock().enable();
 }
 
+/// Initialze the IO APIC and enable the
 pub fn ioapic_init() {
     use crate::consts::IRQ;
-    IO_APIC.lock().init();
-    IO_APIC.lock().enable(IRQ::Keyboard, 0);
+
+    // only init once (ok to be "expensive" since we only call once")
+    static ALREADY_INIT: AtomicBool = AtomicBool::new(false);
+    if ALREADY_INIT.fetch_or(true, core::sync::atomic::Ordering::SeqCst) {
+        panic!("ioapic already init")
+    }
+
+    unsafe {
+        Lazy::<IoApic>::force(&IO_APIC);
+        (*IO_APIC.as_mut_ptr()).init();
+        (*IO_APIC.as_mut_ptr()).enable(IRQ::Keyboard, 0);
+    }
 
     crate::kprintln!("IOAPIC has been initialized");
 }

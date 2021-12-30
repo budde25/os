@@ -1,10 +1,5 @@
 use bitflags::bitflags;
-use conquer_once::spin::OnceCell;
-use crossbeam_queue::ArrayQueue;
-use futures_util::task::AtomicWaker;
 use port::{Port, PortReadOnly, PortWriteOnly};
-
-use super::buf::Buffer;
 
 struct IdeDevice {
     _reserved: u8,     // 0 (Empty) or 1 (This Drive really exists).
@@ -134,7 +129,7 @@ impl Ata {
     pub fn init(&mut self) -> bool {
         use crate::consts::IRQ;
 
-        crate::io::IO_APIC.lock().enable(IRQ::Ide, 0);
+        unsafe { (*crate::io::IO_APIC.as_mut_ptr()).enable(IRQ::Ide, 0) };
         self.poll(false).unwrap();
 
         let mut have_disk_1 = false;
@@ -314,7 +309,7 @@ impl Ata {
     }
 }
 
-// static IDE_QUEUE: OnceCell<ArrayQueue<Buffer>> = OnceCell::uninit();
+// static IDE_QUEUE: OnceCell<ArrayQueue<*const RefCell<Buffer>>> = OnceCell::uninit();
 // static WAKER: AtomicWaker = AtomicWaker::new();
 
 // pub async fn page_handler() {

@@ -1,13 +1,14 @@
 use crate::consts::IRQ;
 use volatile::Volatile;
 
-pub struct IOApicRef(Volatile<&'static mut IOApic>);
+pub struct IoApic(Volatile<&'static mut IoApicRegister>);
 
-impl IOApicRef {
-    unsafe fn new(ptr: *mut IOApic) -> Self {
+impl IoApic {
+    unsafe fn new(ptr: *mut IoApicRegister) -> Self {
         Self(Volatile::new(&mut *ptr))
     }
 
+    /// Initialize the IO Apic
     pub fn init(&mut self) {
         let maxintr = (self.read(0x1) >> 16) & 0xFF;
         let _id = self.read(0x00) >> 24;
@@ -32,6 +33,12 @@ impl IOApicRef {
         self.write(0x10 + 2 * irq + 1, cpu_num << 24);
     }
 
+    /// IO apic id
+    pub fn id(&mut self) -> u8 {
+        // only want bytes 24 -27
+        (self.read(0) >> 24) as u8 & 0b00000111
+    }
+
     fn write(&mut self, register: u32, data: u32) {
         self.0.map_mut(|apic| &mut apic.register).write(register);
         self.0.map_mut(|apic| &mut apic.data).write(data);
@@ -43,21 +50,21 @@ impl IOApicRef {
     }
 }
 
-impl Default for IOApicRef {
+impl Default for IoApic {
     fn default() -> Self {
         use crate::tables::MADT_TABLE;
         let addr = MADT_TABLE.ioapic_addr();
-        unsafe { Self::new(addr.as_mut_ptr::<IOApic>()) }
+        unsafe { Self::new(addr.as_mut_ptr::<IoApicRegister>()) }
     }
 }
 
-struct IOApic {
+struct IoApicRegister {
     register: u32,
     _reserved: [u32; 3],
     data: u32,
 }
 
-impl IOApic {
+impl IoApicRegister {
     fn set_register(&mut self, register: u32) {
         self.register = register;
     }

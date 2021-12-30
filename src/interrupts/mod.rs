@@ -12,7 +12,6 @@ use crate::kprintln;
 pub mod errors;
 pub mod gdt;
 pub mod idt;
-pub mod rflags;
 pub mod tss;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
@@ -190,8 +189,8 @@ pub fn halt() {
 }
 
 pub fn interrupts_enabled() -> bool {
-    use rflags::RFlags;
-    RFlags::read().contains(RFlags::INTERRUPT_ENABLE)
+    use crate::proc::cpu::Rflags;
+    Rflags::read().contains(Rflags::IF)
 }
 
 pub fn halt_loop() -> ! {

@@ -421,7 +421,7 @@ pub mod handlers {
 
     /// Timer Interrupt
     pub extern "x86-interrupt" fn timer(_stack_frame: ExceptionStackFrame) {
-        crate::io::lapic_eoi();
+        lapic_eoi();
     }
 
     /// Keyboard Interrupt
@@ -433,14 +433,20 @@ pub mod handlers {
             crate::io::keyboard::add_scancode(key);
         }
 
-        crate::io::lapic_eoi();
+        lapic_eoi();
     }
 
+    /// Ide Interrupt
     pub extern "x86-interrupt" fn ide(_stack_frame: ExceptionStackFrame) {
         // TODO: no printing in an interrupt handler else deadlock
         crate::kprintln!("WARNING: handle ide int");
 
-        crate::io::lapic_eoi();
+        lapic_eoi();
+    }
+
+    /// Send a end of intterupt to the local apic
+    pub fn lapic_eoi() {
+        unsafe { (*crate::io::LAPIC.as_mut_ptr()).end_of_interrupt() };
     }
 }
 

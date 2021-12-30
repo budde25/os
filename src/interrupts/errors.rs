@@ -1,5 +1,6 @@
 use crate::address::VirtualAddress;
-use crate::interrupts::{rflags::RFlags, SegmentSelector};
+use crate::interrupts::SegmentSelector;
+use crate::proc::cpu::Rflags;
 use bit_field::BitField;
 use bitflags::bitflags;
 use core::fmt::{self, Debug};
@@ -10,7 +11,7 @@ pub struct ExceptionStackFrame {
     pub instruction_pointer: VirtualAddress,
     pub code_segment: SegmentSelector,
     _reserved_1: [u8; 6],
-    cpu_flags: RFlags,
+    cpu_flags: Rflags,
     stack_pointer: VirtualAddress,
     stack_segment: SegmentSelector,
     _reserved_2: [u8; 6],

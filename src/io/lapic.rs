@@ -1,6 +1,8 @@
 use bitflags::bitflags;
 use core::ops::{Index, IndexMut};
 
+use crate::PhysicalAddress;
+
 bitflags! {
     struct InterruptCommand: u32 {
         const INIT     =  0x00000500;  // INIT/RESET
@@ -132,9 +134,9 @@ impl Lapic {
         self.0[index].read()
     }
 
-    // Get the id of the lapic
-    pub fn id(&self) -> u32 {
-        self.read(Register::Id) >> 24
+    /// Get the Id of the lapic
+    pub fn id(&self) -> u8 {
+        (self.read(Register::Id) >> 24) as u8
     }
 
     pub fn error_status(&self) -> ErrorStatus {
@@ -144,6 +146,20 @@ impl Lapic {
     /// call when an interrupt has ended
     pub fn end_of_interrupt(&mut self) {
         self.write(Register::EndOfInterrupt, 0);
+    }
+
+    /// Start additional processors
+    pub fn start_ap(_apic_id: u8, _addr: PhysicalAddress) {
+        // "The BSP must initialize CMOS shutdown code to 0AH
+        // and the warm reset vector (DWORD based at 40:67) to point at
+        // the AP startup code prior to the [universal startup algorithm]."
+
+        // outb(CMOS_PORT, 0xF);  // offset 0xF is shutdown code
+        // outb(CMOS_PORT+1, 0x0A);
+        // wrv = (ushort*)P2V((0x40<<4 | 0x67));  // Warm reset vector
+        // wrv[0] = 0;
+        // wrv[1] = addr >> 4;
+        todo!();
     }
 }
 
