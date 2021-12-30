@@ -146,7 +146,6 @@ macro_rules! kprint {
 }
 
 /// Panic use only, Print that writes to VGA buffer and Uart
-#[macro_export]
 macro_rules! kpanicprint {
     ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*), true));
 }
@@ -159,11 +158,13 @@ macro_rules! kprintln {
 }
 
 /// Panic use only, Print line that writes to VGA and Uart
-#[macro_export]
 macro_rules! kpanicprintln {
     () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::kpanicprint!("{}\n", format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::io::kpanicprint!("{}\n", format_args!($($arg)*)));
 }
+
+pub(super) use kpanicprint;
+pub(super) use kpanicprintln;
 
 #[doc(hidden)]
 pub fn _print(args: Arguments, panic: bool) {

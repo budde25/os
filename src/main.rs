@@ -28,6 +28,7 @@ mod interrupts;
 mod io;
 mod memory;
 mod paging;
+mod proc;
 mod tables;
 mod task;
 
@@ -70,11 +71,14 @@ pub extern "C" fn kmain() -> ! {
     // enable ide driver
     disk::ide_init();
 
+    kprintln!("Current time: {}", io::CMOS.lock().time());
+
+    // start addional processors
+    ap_startup();
+
     // disk::ide_test();
     // enable interrupts
     interrupts::enable_interrupts();
-
-    kprintln!("Current time: {}", io::CMOS.lock().time());
 
     use task::executor::Executor;
     use task::Task;
@@ -84,6 +88,23 @@ pub extern "C" fn kmain() -> ! {
     let mut executor = Executor::new();
     executor.spawn(Task::new(io::keyboard::print_keypresses()));
     executor.run();
+}
+
+fn ap_startup() {
+    use proc::cpu::Cpu;
+    use tables::MADT_TABLE;
+
+    let _aps_running = 0;
+
+    let num_cores = MADT_TABLE.num_cores();
+    let lapic_ids = MADT_TABLE.apic_ids();
+
+    for i in 0..num_cores {
+        let a = Cpu::current_cpu();
+
+        let lapic_id = lapic_ids[i as usize].unwrap();
+        kdbg!(lapic_id);
+    }
 }
 
 #[lang = "eh_personality"]
@@ -96,16 +117,16 @@ extern "C" fn eh_personality() {
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     use crate::io::colors::{NC, RED};
-    crate::kpanicprint!("{RED}Aborting: ");
+    crate::io::kpanicprint!("{RED}Aborting: ");
     if let Some(p) = info.location() {
-        crate::kpanicprintln!(
+        crate::io::kpanicprintln!(
             "[{}:{}] {}{NC}",
             p.file(),
             p.line(),
             info.message().unwrap()
         );
     } else {
-        crate::kpanicprintln!("no information available.");
+        crate::io::kpanicprintln!("no information available.");
     }
     common::abort()
 }

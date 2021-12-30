@@ -28,6 +28,7 @@ pub mod interrupts;
 pub mod io;
 pub mod memory;
 pub mod paging;
+pub mod proc;
 pub mod tables;
 pub mod task;
 
