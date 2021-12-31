@@ -11,6 +11,9 @@ SECTIONS
         __text_start = .;
         *(.multiboot)
         *(.text*)
+        __mp_boot_start = .;
+        *(.mp_boot)
+        __mp_boot_end = .;
         __text_end = .;
     }
 

@@ -11,6 +11,7 @@
 
 core::arch::global_asm!(include_str!("arch/x86_64/boot_32.s"));
 core::arch::global_asm!(include_str!("arch/x86_64/boot_64.s"));
+core::arch::global_asm!(include_str!("arch/x86_64/mp_boot.s"));
 
 // export some common functionality
 pub use address::PhysicalAddress;

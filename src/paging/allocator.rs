@@ -2,7 +2,7 @@ use super::tlb;
 use crate::consts::{KHEAP_START, SIZE_1KIB};
 use crate::paging::page_table::{Level4, PageTable};
 use crate::paging::phys_frame::PhysFrame;
-use crate::{kdbg, PhysicalAddress};
+use crate::PhysicalAddress;
 use crate::{registers::control::Cr3, VirtualAddress};
 use core::sync::atomic::{AtomicU64, Ordering};
 
@@ -58,7 +58,6 @@ impl Allocator for Mapper {
                     PhysicalAddress::new(ADDR.fetch_add(SIZE_1KIB, Ordering::Relaxed)),
                     PageFlags::PRESENT | PageFlags::WRITEABLE,
                 );
-                kdbg!(&item);
                 return item.frame();
             }
         }

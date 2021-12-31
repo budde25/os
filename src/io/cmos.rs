@@ -1,9 +1,6 @@
 use bitflags::bitflags;
 use derive_more::{Add, AddAssign, Display, From, Into, Sub, SubAssign};
-use port::{PortReadOnly, PortWriteOnly};
-
-/// TODO: make spin on real hardware
-fn micro_delay(_ms: usize) {}
+use port::{Port, PortWriteOnly};
 
 #[derive(
     Debug,
@@ -224,7 +221,7 @@ bitflags! {
 
 pub struct Cmos {
     command: PortWriteOnly<u8>,
-    data: PortReadOnly<u8>,
+    data: Port<u8>,
 }
 
 impl Cmos {
@@ -232,7 +229,7 @@ impl Cmos {
         const PORT_NUM: u16 = 0x70;
         Self {
             command: PortWriteOnly::new(PORT_NUM),
-            data: PortReadOnly::new(PORT_NUM + 1),
+            data: Port::new(PORT_NUM + 1),
         }
     }
 
@@ -243,7 +240,7 @@ impl Cmos {
     pub fn read(&mut self, time: Time) -> u8 {
         unsafe {
             self.command.write(time.bits());
-            micro_delay(200);
+            super::micro_delay(200);
             self.data.read()
         }
     }
@@ -276,6 +273,14 @@ impl Cmos {
         }
 
         t1
+    }
+
+    /// Cmos shudown
+    pub fn shutdown(&mut self) {
+        unsafe {
+            self.command.write(0xF);
+            self.data.write(0x0A);
+        }
     }
 }
 

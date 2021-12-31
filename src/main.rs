@@ -12,6 +12,7 @@
 
 core::arch::global_asm!(include_str!("arch/x86_64/boot_32.s"));
 core::arch::global_asm!(include_str!("arch/x86_64/boot_64.s"));
+core::arch::global_asm!(include_str!("arch/x86_64/mp_boot.s"));
 
 // export some common functionality
 pub use address::PhysicalAddress;
@@ -91,6 +92,7 @@ pub extern "C" fn kmain() -> ! {
 }
 
 fn ap_startup() {
+    use paging::allocator::Allocator;
     use proc::cpu::Cpu;
     use tables::MADT_TABLE;
 
@@ -98,12 +100,46 @@ fn ap_startup() {
 
     let num_cores = MADT_TABLE.num_cores();
     let lapic_ids = MADT_TABLE.apic_ids();
+    let code = PhysicalAddress::new(0x7000);
+
+    // move the code
+    extern "C" {
+        static __mp_boot_start: usize;
+        static __mp_boot_end: usize;
+    }
+    let mp_boot_start = unsafe { &__mp_boot_start as *const _ as *const u8 };
+    let mp_boot_size =
+        unsafe { &__mp_boot_end as *const _ as usize - &__mp_boot_start as *const _ as usize };
+
+    let src = PhysicalAddress::new(mp_boot_start as u64);
+
+    unsafe { mem_copy(code.as_mut_ptr::<u8>(), src.as_ptr::<u8>(), mp_boot_size) };
 
     for i in 0..num_cores {
-        let a = Cpu::current_cpu();
+        let _ = Cpu::current_cpu();
 
         let lapic_id = lapic_ids[i as usize].unwrap();
-        kdbg!(lapic_id);
+        if lapic_id == 0 {
+            continue;
+        }
+
+        let stack = paging::MAPPER.lock().allocate_frame().unwrap();
+        let stack_addr = u64::from(stack.address());
+        let code_ptr = code.as_mut_ptr::<u64>();
+        unsafe { code_ptr.sub(1).write_volatile(stack_addr + 4096) };
+        unsafe {
+            code_ptr
+                .sub(2)
+                .write_volatile(mp_enter as *const u64 as u64)
+        };
+
+        unsafe { (*io::LAPIC.as_mut_ptr()).start_ap(lapic_id, code) };
+    }
+}
+
+unsafe fn mem_copy(dst: *mut u8, src: *const u8, len: usize) {
+    for i in 0..len {
+        dst.add(i).write_volatile(src.add(i).read_volatile())
     }
 }
 
@@ -111,6 +147,11 @@ fn ap_startup() {
 #[no_mangle]
 extern "C" fn eh_personality() {
     interrupts::halt_loop();
+}
+
+#[no_mangle]
+extern "C" fn mp_enter() {
+    kdbg!("here");
 }
 
 #[cfg(not(test))]

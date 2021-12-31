@@ -118,6 +118,10 @@ pub fn current_time() -> RtcDate {
     unsafe { CMOS.time() }
 }
 
+/// TODO: make spin on real hardware
+#[inline(never)]
+fn micro_delay(_ms: usize) {}
+
 #[macro_export]
 macro_rules! kdbg {
     () => {

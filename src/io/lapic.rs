@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use core::ops::{Index, IndexMut};
 
-use crate::PhysicalAddress;
+use crate::{kdbg, PhysicalAddress, VirtualAddress};
 
 bitflags! {
     struct InterruptCommand: u32 {
@@ -149,17 +149,44 @@ impl Lapic {
     }
 
     /// Start additional processors
-    pub fn start_ap(_apic_id: u8, _addr: PhysicalAddress) {
+    pub fn start_ap(&mut self, apic_id: u8, addr: PhysicalAddress) {
         // "The BSP must initialize CMOS shutdown code to 0AH
         // and the warm reset vector (DWORD based at 40:67) to point at
         // the AP startup code prior to the [universal startup algorithm]."
+        unsafe { crate::io::CMOS.shutdown() };
 
-        // outb(CMOS_PORT, 0xF);  // offset 0xF is shutdown code
-        // outb(CMOS_PORT+1, 0x0A);
-        // wrv = (ushort*)P2V((0x40<<4 | 0x67));  // Warm reset vector
-        // wrv[0] = 0;
-        // wrv[1] = addr >> 4;
-        todo!();
+        let wrv_value: u16 = u64::from(addr) as u16;
+        let warm_reset_vector = PhysicalAddress::new(0x40 << 4 | 0x67).as_mut_ptr::<u16>();
+
+        unsafe { warm_reset_vector.write_unaligned(wrv_value) };
+
+        use InterruptCommand as IC;
+        use Register as Reg;
+
+        // universal startup algorithm
+        self.write(Reg::InterruptCommand(1), (apic_id as u32) << 24);
+        self.write(
+            Reg::InterruptCommand(0),
+            IC::INIT.bits | IC::LEVEL.bits | IC::ASSERT.bits,
+        );
+        super::micro_delay(200);
+        assert!(self.error_status().is_empty());
+
+        self.write(Reg::InterruptCommand(0), IC::INIT.bits | IC::LEVEL.bits);
+
+        super::micro_delay(100);
+        assert!(self.error_status().is_empty());
+        // send ipi twice!
+        for _ in 0..2 {
+            self.write(Reg::InterruptCommand(1), (apic_id as u32) << 24);
+            self.write(
+                Reg::InterruptCommand(0),
+                IC::STARTUP.bits | (u64::from(addr) >> 12) as u32,
+            );
+
+            super::micro_delay(200);
+            assert!(self.error_status().is_empty());
+        }
     }
 }
 
