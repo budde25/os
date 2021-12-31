@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use core::ops::{Index, IndexMut};
 
-use crate::{kdbg, PhysicalAddress, VirtualAddress};
+use crate::PhysicalAddress;
 
 bitflags! {
     struct InterruptCommand: u32 {
@@ -153,7 +153,7 @@ impl Lapic {
         // "The BSP must initialize CMOS shutdown code to 0AH
         // and the warm reset vector (DWORD based at 40:67) to point at
         // the AP startup code prior to the [universal startup algorithm]."
-        unsafe { crate::io::CMOS.shutdown() };
+        unsafe { crate::io::CMOS.warm_reset() };
 
         let wrv_value: u16 = u64::from(addr) as u16;
         let warm_reset_vector = PhysicalAddress::new(0x40 << 4 | 0x67).as_mut_ptr::<u16>();
@@ -183,7 +183,6 @@ impl Lapic {
                 Reg::InterruptCommand(0),
                 IC::STARTUP.bits | (u64::from(addr) >> 12) as u32,
             );
-
             super::micro_delay(200);
             assert!(self.error_status().is_empty());
         }

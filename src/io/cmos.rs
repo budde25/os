@@ -240,7 +240,7 @@ impl Cmos {
     pub fn read(&mut self, time: Time) -> u8 {
         unsafe {
             self.command.write(time.bits());
-            super::micro_delay(200);
+            //super::micro_delay(200);
             self.data.read()
         }
     }
@@ -275,10 +275,10 @@ impl Cmos {
         t1
     }
 
-    /// Cmos shudown
-    pub fn shutdown(&mut self) {
+    /// Set the cmos reset value to "warm start with far just"
+    pub fn warm_reset(&mut self) {
         unsafe {
-            self.command.write(0xF);
+            self.command.write(0x0F);
             self.data.write(0x0A);
         }
     }

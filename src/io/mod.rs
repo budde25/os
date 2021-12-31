@@ -5,6 +5,7 @@ pub mod ioapic;
 pub mod keyboard;
 pub mod lapic;
 pub mod pic;
+pub mod pit;
 pub mod uart;
 pub mod vga;
 
@@ -119,8 +120,17 @@ pub fn current_time() -> RtcDate {
 }
 
 /// TODO: make spin on real hardware
-#[inline(never)]
-fn micro_delay(_ms: usize) {}
+pub fn micro_delay(ms: usize) {
+    let mut pit = pit::Pit::new();
+    for _ in 0..ms {
+        pit.sleep();
+        loop {
+            if pit.is_done() {
+                break;
+            }
+        }
+    }
+}
 
 #[macro_export]
 macro_rules! kdbg {

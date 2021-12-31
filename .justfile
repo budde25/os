@@ -3,8 +3,8 @@
 ROOT := justfile_directory()
 TARGET_DIR := justfile_directory() + "/target"
 OUTPUT_FILE := justfile_directory() + "/target/x86_64-os/debug/os"
-QEMU_LOG := "-D " + TARGET_DIR + "/log.txt -d cpu_rest -d guest_errors "
-QEMU_ARGS := QEMU_LOG + "-serial mon:stdio -smp 2 -boot order=d -drive file=fs.img,index=1,media=disk,format=raw -device isa-debug-exit,iobase=0xf4,iosize=0x04"
+QEMU_LOG := "-D " + TARGET_DIR + "/log.txt -d cpu_rest -d guest_errors -d unimp "
+QEMU_ARGS := "-serial mon:stdio -smp 2 -boot order=d -drive file=fs.img,index=1,media=disk,format=raw -device isa-debug-exit,iobase=0xf4,iosize=0x04"
 QEMU_ARGS_NOX := QEMU_ARGS + " -nographic"
 QEMU_TARGET := "-cdrom " + TARGET_DIR + "/os.iso"
 
