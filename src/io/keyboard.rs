@@ -127,14 +127,14 @@ pub fn add_scancode(scancode: u8) {
 }
 
 pub struct ScancodeStream {
-    _priavte: (),
+    _priavte: (), // disallows manual struct creation
 }
 
 impl ScancodeStream {
     pub fn new() -> Self {
         SCANCODE_QUEUE
             .try_init_once(|| ArrayQueue::new(100))
-            .expect("ScancodeStream::new should only be called once");
+            .expect("ScancodeStream::new() should only be called once");
         Self { _priavte: () }
     }
 }

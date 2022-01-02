@@ -1,5 +1,15 @@
+use core::cell::RefCell;
+use core::pin::Pin;
+use core::task::{Context, Poll};
+
 use bitflags::bitflags;
+use conquer_once::spin::OnceCell;
+use crossbeam_queue::ArrayQueue;
+use futures_util::task::AtomicWaker;
+use futures_util::{Stream, StreamExt};
 use port::{Port, PortReadOnly, PortWriteOnly};
+
+use super::buf::Buffer;
 
 struct IdeDevice {
     _reserved: u8,     // 0 (Empty) or 1 (This Drive really exists).
@@ -99,7 +109,7 @@ pub struct Ata {
 }
 
 impl Ata {
-    fn new(io_port: u16, control_port: u16, primary: bool) -> Self {
+    const fn new(io_port: u16, control_port: u16, primary: bool) -> Self {
         Self {
             primary,
             data: Port::new(io_port),
@@ -118,11 +128,11 @@ impl Ata {
         }
     }
 
-    pub fn new_primary() -> Self {
+    pub const fn new_primary() -> Self {
         Self::new(0x1f0, 0x3f6, true)
     }
 
-    pub fn new_secondary() -> Self {
+    pub const fn new_secondary() -> Self {
         Self::new(0x170, 0x376, false)
     }
 
@@ -155,7 +165,8 @@ impl Ata {
         unsafe { Status::from_bits_truncate(self.status.read()) }
     }
 
-    pub fn read(&mut self, lba: u32, buf: &mut [u16; 256]) {
+    pub fn read(&mut self, lba: u32, buf: &mut [u8; 512]) {
+        let buf = unsafe { core::mem::transmute::<&mut [u8; 512], &mut [u16; 256]>(buf) };
         self.setup_access(0, lba).unwrap();
         self._read(buf).unwrap();
     }
@@ -172,7 +183,8 @@ impl Ata {
         Ok(())
     }
 
-    pub fn write(&mut self, lba: u32, buf: &[u16; 256]) {
+    pub fn write(&mut self, lba: u32, buf: &[u8; 512]) {
+        let buf = unsafe { core::mem::transmute::<&[u8; 512], &[u16; 256]>(buf) };
         self.setup_access(1, lba).unwrap();
         self._write(buf).unwrap();
     }
@@ -309,14 +321,72 @@ impl Ata {
     }
 }
 
-// static IDE_QUEUE: OnceCell<ArrayQueue<*const RefCell<Buffer>>> = OnceCell::uninit();
-// static WAKER: AtomicWaker = AtomicWaker::new();
+struct IdeQueue(OnceCell<ArrayQueue<&'static RefCell<Buffer>>>);
+unsafe impl Sync for IdeQueue {}
 
-// pub async fn page_handler() {
-//     let mut buffers = BufferSteam::new();
-//     // TODO: check to muck sure we have a lock on it
+impl IdeQueue {
+    const fn uninit() -> Self {
+        Self(OnceCell::uninit())
+    }
+}
 
-//     while let Some(buf) = buffers.next().await {
-//         // read data if needed
-//     }
-// }
+static IDE_QUEUE: IdeQueue = IdeQueue::uninit();
+
+pub fn ide_queue_init() {
+    IDE_QUEUE
+        .0
+        .try_init_once(|| ArrayQueue::new(100))
+        .expect("IdeStream::new() should only be called once");
+}
+
+pub fn add_ide_queue(buf: &'static RefCell<Buffer>) {
+    {
+        let b = buf.borrow();
+        if !b.is_dirty() && b.is_valid() {
+            panic!("nothing to do")
+        }
+
+        if let Ok(queue) = IDE_QUEUE.0.try_get() {
+            if queue.push(buf).is_err() {
+                crate::kprintln!("ide queue full")
+            }
+        } else {
+            crate::kprintln!("WARNING: ide queue uninitialized");
+        }
+    }
+
+    read_write();
+
+    let b = buf.borrow();
+    while b.is_dirty() || !b.is_valid() {
+        // sleep
+    }
+}
+
+pub fn interrupt_handler() {
+    read_write();
+    // TODO wakeup
+    read_write();
+}
+
+pub fn read_write() {
+    use super::IDE;
+
+    if IDE.is_locked() {
+        panic!("IDE locked");
+    }
+
+    let mut ide = IDE.lock();
+    if let Some(buf_ref) = IDE_QUEUE.0.try_get().expect("array not init").pop() {
+        let mut buf = buf_ref.borrow_mut();
+        if buf.is_dirty() {
+            ide.write(buf.block_no(), buf.data());
+            buf.set_dirty(false);
+        } else if !buf.is_valid() {
+            ide.read(buf.block_no(), buf.data());
+            buf.set_valid(true);
+        }
+    } else {
+        return;
+    }
+}

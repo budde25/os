@@ -1,6 +1,7 @@
 use bcache::BufferCache;
+use core::sync::atomic::AtomicBool;
 use ide::Ata;
-use spin::{Lazy, Mutex};
+use spin::Mutex;
 
 pub mod bcache;
 pub mod buf;
@@ -8,34 +9,21 @@ pub mod ext;
 pub mod fat;
 pub mod ide;
 
-static IDE: Lazy<Mutex<Ata>> = Lazy::new(|| {
-    let ata = Ata::new_primary();
-    Mutex::new(ata)
-});
-
-static BUFFERS: Lazy<Mutex<BufferCache>> = Lazy::new(|| {
-    let buffer = BufferCache::new();
-    Mutex::new(buffer)
-});
+static HAVE_DISK_1: AtomicBool = AtomicBool::new(false);
+static IDE: Mutex<Ata> = Mutex::new(Ata::new_primary());
+static BUFFERS: Mutex<BufferCache> = Mutex::new(BufferCache::new());
 
 pub fn ide_init() {
     let disk_1 = IDE.lock().init();
+    HAVE_DISK_1.store(true, core::sync::atomic::Ordering::Relaxed);
+    ide::ide_queue_init();
 
     crate::kprintln!("Disk 1 exists: {disk_1}");
 }
 
 pub fn ide_test() {
-    let mut ide = IDE.lock();
-
-    let mut buf = [0; 256];
-
-    ide.read(2, &mut buf);
-
-    let _ext = unsafe { *(&buf as *const _ as *const ext::Superblock) };
-
-    //crate::kdbg!(&ext);
-    //crate::kdbg!(ext.verify());
-    //crate::kdbg!(ext.volume_name());
-    // buf[0] = 0xFFFF;
-    // ide.write(0, &buf);
+    let mut bufs = BUFFERS.lock();
+    let data = bufs.read(1, 0);
+    data.borrow_mut().data()[1] = 0xFF;
+    bcache::BufferCache::write(data);
 }

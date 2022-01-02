@@ -1,43 +1,52 @@
 use super::buf::Buffer;
 use core::cell::RefCell;
+use staticvec::StaticVec;
+
+static mut BUFFERS: StaticVec<RefCell<Buffer>, 30> = StaticVec::new();
 
 pub struct BufferCache {
-    buffers: [RefCell<Option<Buffer>>; 30],
+    _private: (),
 }
 
 impl BufferCache {
-    pub fn new() -> Self {
-        const NONE: RefCell<Option<Buffer>> = RefCell::new(None);
-        Self {
-            buffers: [NONE; 30],
-        }
+    pub const fn new() -> Self {
+        Self { _private: () }
     }
 
-    fn get(&'static mut self, device: u32, block_no: u32) -> &'static RefCell<Option<Buffer>> {
+    unsafe fn get(&mut self, device: u32, block_no: u32) -> &'static RefCell<Buffer> {
         // check the cache
-
-        for i in 0..self.buffers.len() {
-            let buf_ref = self.buffers[i].borrow();
-            if let Some(buf) = buf_ref.as_ref() {
-                if buf.device() == device && buf.block_no() == block_no {
-                    self.buffers[i].borrow_mut().as_mut().unwrap().ref_inc();
-                    return &self.buffers[i];
-                }
+        for buf in &BUFFERS {
+            if buf.borrow().device() == device && buf.borrow().block_no() == block_no {
+                buf.borrow_mut().ref_inc();
+                return buf;
             }
         }
 
-        // not cached, add to cache
-        for i in 0..self.buffers.len() {
-            if self.buffers[i].borrow().is_some() {
-                continue;
-            } else {
-                *self.buffers[i].borrow_mut() = Some(Buffer::new(device, block_no));
-                return &self.buffers[i];
+        //not cached, add to cache
+        let insert_buf = RefCell::new(Buffer::new(device, block_no));
+        BUFFERS.push(insert_buf);
+        // TODO this could probably be faster
+        for buf in &BUFFERS {
+            if buf.borrow().device() == device && buf.borrow().block_no() == block_no {
+                buf.borrow_mut().ref_inc();
+                return buf;
             }
         }
 
-        panic!("buffer full");
+        unreachable!()
     }
 
-    pub fn read(device: u32, block_no: u32) {}
+    pub fn read(&mut self, device: u32, block_no: u32) -> &'static RefCell<Buffer> {
+        let buf = unsafe { self.get(device, block_no) };
+        if !buf.borrow().is_valid() {
+            super::ide::add_ide_queue(buf);
+        }
+
+        buf
+    }
+
+    pub fn write(buf: &'static RefCell<Buffer>) {
+        buf.borrow_mut().set_dirty(true);
+        super::ide::add_ide_queue(buf);
+    }
 }

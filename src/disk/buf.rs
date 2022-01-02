@@ -39,6 +39,26 @@ impl Buffer {
     pub fn ref_dec(&mut self) {
         self.ref_cnt -= 1;
     }
+
+    pub fn is_valid(&self) -> bool {
+        self.flags.contains(Flags::VALID)
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.flags.contains(Flags::DIRTY)
+    }
+
+    pub fn set_dirty(&mut self, dirty: bool) {
+        self.flags.set(Flags::DIRTY, dirty)
+    }
+
+    pub fn set_valid(&mut self, valid: bool) {
+        self.flags.set(Flags::VALID, valid)
+    }
+
+    pub fn data(&mut self) -> &mut [u8; BSIZE] {
+        &mut self.data
+    }
 }
 
 bitflags::bitflags! {
