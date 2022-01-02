@@ -1,12 +1,7 @@
-use core::cell::RefCell;
-use core::pin::Pin;
-use core::task::{Context, Poll};
-
 use bitflags::bitflags;
 use conquer_once::spin::OnceCell;
+use core::cell::RefCell;
 use crossbeam_queue::ArrayQueue;
-use futures_util::task::AtomicWaker;
-use futures_util::{Stream, StreamExt};
 use port::{Port, PortReadOnly, PortWriteOnly};
 
 use super::buf::Buffer;
