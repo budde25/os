@@ -17,7 +17,6 @@ core::arch::global_asm!(include_str!("arch/x86_64/trampoline.s"));
 // export some common functionality
 pub use address::PhysicalAddress;
 pub use address::VirtualAddress;
-use test::test_main;
 
 extern crate alloc;
 

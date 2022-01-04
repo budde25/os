@@ -125,7 +125,7 @@ pub fn micro_delay(ms: usize) {
     for _ in 0..ms {
         pit.sleep();
         loop {
-            if pit.is_done() {
+            if pit.check_done() {
                 break;
             }
         }

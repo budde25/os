@@ -1,63 +1,175 @@
-#[derive(Debug, Clone, Copy)]
-#[repr(C, packed)]
-pub struct Superblock {
-    inodes_count: u32,
-    blocks_count: u32,
-    r_blocks_clount: u32, // number of blocks reserved for superuser
-    free_block_count: u32,
-    free_inode_count: u32,
-    first_data_block: u32,
-    log_block_size: u32,   // left shift 1024 by number
-    log_frag_size: i32,    // left shift 1024 by number
-    blocks_per_group: u32, // number of blocks in each block group
-    frags_per_groups: u32, // number of inoes in each block group
-    inodes_per_group: u32, // number of fragments for each block group
-    mtime: u32,            // POSIX last mount time
-    wtime: u32,            // POSIX last written tim
-    mnt_count: u16, // number of times the volume has been mounted since its last consistency check (fsck)
-    max_mnt_count: u16, // number of mounts allowed before a consistency check (fsck) must be done
-    magic: u16,     // 0xef53
-    state: FsStates, // file system state
-    errors: Errors, // what to do if an error is detected
-    minor_rev_level: u16,
-    lastcheck: u32,        // POSIX
-    checkinterval: u32,    // POSIX interval between forced check
-    creator_os: CreatorOs, // os id that created volume
-    rev_level: u32,
-    def_resuid: u16, // user id that can use reserved blocks
-    def_resgid: u16, // group id that can use reserved blocks
-    // extended only if major version >= 1
-    first_inode: u32,                   // first non reserved inode
-    inode_size: u16,                    // size of inode struct in bytes
-    block_group_nr: u16,                // of this superblock (if backup)
-    feature_compat: FeatureCompat,      // not required to support read or write
-    feature_incompat: FeatureIncompat,  // required to support read or write
-    feature_ro_compat: FeatureRoCompat, // if not supported must be read only
-    uuid: u128,
-    volume_name: u128,      // cstring
-    last_mounted: [u8; 64], // cstring, path volume was last mounted to
-    algo_bitmap: u32,       // compression used
-    // performance hints
-    prealloc_blocks: u8,     // number of blocks to preallocate for files
-    prealloc_dir_blocks: u8, // number of blocks to preallocate for dirs
-    _reserved_1: u16,        // alignment
-    // jounaling support
-    journal_uuid: u128, // same style as file system id
-    journal_inum: u32,
-    journal_dev: u32,
-    last_orphan: u32, // head of orphan inode list
-    // directory indexing support
-    hash_seed: [u32; 4],
-    def_hash_version: u8,
-    _reserved_2: [u8; 3], // padding reserved for expansion
-    // other
-    default_mnt_opts: u32, // deafult mount options
-    first_meta_bg: u32,
 
+use custom_debug_derive::Debug;
+use staticvec::StaticVec;
+
+use crate::consts::BSIZE;
+use crate::disk::bcache;
+
+const BLOCK_SIZE: usize = 1024;
+const INODE_SIZE: usize = 256;
+
+pub fn ext_test() {
+
+
+    let _ext = Ext::new(1);
+    // let i = ext.read_inode(2);
+    //kdbg!(i);
+}
+
+pub struct Ext {
+    device: u32,
+    superblock: Superblock,
+    block_groups: StaticVec<BlockGroupDescriptor, 10>,
+}
+
+impl Ext {
+    pub fn new(device: u32) -> Self {
+        let superblock = Superblock::read(device);
+        let mut block_groups = StaticVec::new();
+
+        // we are starting at 1-2 empty, 2-3 superblock
+        // TODO: this is stupid and slow
+        for i in 0..superblock.block_groups() {
+            block_groups.push(BlockGroupDescriptor::new(device, i as u8))
+        }
+
+        // assert we have a valid ext2 superblock
+        assert_eq!(superblock.verify(), true);
+
+        // FIXME: core logic relies on this being the same.
+        assert_eq!(
+            core::mem::size_of::<Inode>(),
+            superblock.inode_size as usize
+        );
+
+        crate::kdbg!(superblock);
+
+        assert_eq!(superblock.block_size() as usize, BLOCK_SIZE);
+
+        crate::kdbg!(&block_groups);
+
+        Self {
+            device,
+            superblock,
+            block_groups,
+        }
+    }
+
+    fn read_root_dir(&self) {
+        const ROOT_INODE: usize = 2;
+        self.read_inode(2);
+    }
+
+    fn read_inode(&self, inode: usize) -> Inode {
+        use super::BUFFERS;
+        let block_no = self.block_containing_inode(inode);
+
+        let block_group = self.block_group_containing_inode(inode);
+        let _inode_table = block_group.inode_table;
+
+        let mut bufs = BUFFERS.lock();
+        let buf = bufs.read(self.device, block_no as u32);
+        let b = buf.borrow();
+
+        let mut inode_raw: [u8; 256] = [0; 256];
+        for i in 0..inode_raw.len() {
+            inode_raw[i] = b.data()[i];
+        }
+
+        unsafe { core::intrinsics::transmute::<[u8; 256], Inode>(inode_raw) }
+    }
+
+    /// zero a block
+    fn block_zero(&self, block_no: u32) {
+        use super::BUFFERS;
+        let mut bufs = BUFFERS.lock();
+        let b = bufs.read(self.device, block_no);
+        *b.borrow_mut().data_mut() = [0; BSIZE];
+        bcache::BufferCache::write(b);
+    }
+
+    fn block_group_containing_inode(&self, inode: usize) -> &BlockGroupDescriptor {
+        let block_group = (inode - 1) / self.superblock.inodes_per_group as usize;
+        &self.block_groups[block_group]
+    }
+
+    fn block_containing_inode(&self, inode: usize) -> usize {
+        let index = (inode - 1) % self.superblock.inodes_per_group as usize;
+        let containing_block =
+            (index * self.superblock.inode_size as usize) / self.superblock.block_size() as usize;
+        containing_block
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+struct Superblock {
+    pub inodes_count: u32,
+    pub blocks_count: u32,
+    pub r_blocks_count: u32, // number of blocks reserved for superuser
+    pub free_block_count: u32,
+    pub free_inode_count: u32,
+    pub first_data_block: u32,
+    pub log_block_size: u32,   // left shift 1024 by number
+    pub log_frag_size: i32,    // left shift 1024 by number
+    pub blocks_per_group: u32, // number of blocks in each block group
+    pub frags_per_groups: u32, // number of inoes in each block group
+    pub inodes_per_group: u32, // number of fragments for each block group
+    pub mtime: u32,            // POSIX last mount time
+    pub wtime: u32,            // POSIX last written tim
+    pub mnt_count: u16, // number of times the volume has been mounted since its last consistency check (fsck)
+    pub max_mnt_count: u16, // number of mounts allowed before a consistency check (fsck) must be done
+    pub magic: u16,         // 0xef53
+    pub state: FsStates,    // file system state
+    pub errors: Errors,     // what to do if an error is detected
+    pub minor_rev_level: u16,
+    pub lastcheck: u32,        // POSIX
+    pub checkinterval: u32,    // POSIX interval between forced check
+    pub creator_os: CreatorOs, // os id that created volume
+    pub rev_level: u32,
+    pub def_resuid: u16, // user id that can use reserved blocks
+    pub def_resgid: u16, // group id that can use reserved blocks
+    // extended only if major version >= 1
+    pub first_inode: u32,                   // first non reserved inode
+    pub inode_size: u16,                    // size of inode struct in bytes
+    pub block_group_nr: u16,                // of this superblock (if backup)
+    pub feature_compat: FeatureCompat,      // not required to support read or write
+    pub feature_incompat: FeatureIncompat,  // required to support read or write
+    pub feature_ro_compat: FeatureRoCompat, // if not supported must be read only
+    pub uuid: u128,
+    pub volume_name: u128,      // cstring
+    pub last_mounted: [u8; 64], // cstring, path volume was last mounted to
+    pub algo_bitmap: u32,       // compression used
+    // performance hints
+    pub prealloc_blocks: u8,     // number of blocks to preallocate for files
+    pub prealloc_dir_blocks: u8, // number of blocks to preallocate for dirs
+    #[debug(skip)]
+    _reserved_1: u16, // alignment
+    // jounaling support
+    pub journal_uuid: u128, // same style as file system id
+    pub journal_inum: u32,
+    pub journal_dev: u32,
+    pub last_orphan: u32, // head of orphan inode list
+    pub hash_seed: [u32; 4],
+    pub def_hash_version: u8,
+    #[debug(skip)]
+    _reserved_2: [u8; 3], // padding reserved for expansion
+    pub default_mnt_opts: u32, // deafult mount options
+    pub first_meta_bg: u32,
+    #[debug(skip)]
     _reserved_3: [u8; 760], // unused
 }
 
 impl Superblock {
+    /// Read the superblock from the disk
+    pub fn read(device: u32) -> Self {
+        use core::mem::transmute;
+        let mut b = super::BUFFERS.lock();
+        // the superblock will in block 1
+        let data = b.read(device, 1).borrow().data().clone();
+        unsafe { transmute::<[u8; 1024], Superblock>(data) }
+    }
+
     // check magic ext2 value
     fn verify(&self) -> bool {
         self.magic == 0xEF53
@@ -80,6 +192,10 @@ impl Superblock {
         } else {
             1024 >> (-self.log_frag_size) as u64
         }
+    }
+
+    fn block_groups(&self) -> u64 {
+        (self.blocks_count.div_ceil(self.blocks_per_group)).into()
     }
 }
 
@@ -147,23 +263,47 @@ bitflags::bitflags! {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-#[repr(C, packed)]
+#[derive(Debug)]
+#[repr(C)]
 
-struct BlockGroupDescriptorTable {
+struct BlockGroupDescriptor {
     block_bitmap: u32,
     inode_bitmap: u32,
     inode_table: u32,
     free_block_count: u16,
     free_inode_count: u16,
     used_dirs_count: u16,
+    #[debug(skip)]
     _padding: u16,
+    #[debug(skip)]
     _reserved: [u8; 12],
 }
 
+impl BlockGroupDescriptor {
+    pub fn new(device: u32, index: u8) -> Self {
+        use core::mem::transmute;
+
+        let size = core::mem::size_of::<Self>();
+        assert_eq!(size, 32);
+        assert!((size * index as usize) < 512);
+
+        let mut b = super::BUFFERS.lock();
+        // the group descriptor will in block 4
+        let block = b.read(device, 4).borrow();
+
+        let mut bgd_raw: [u8; 32] = [0; 32];
+        let data = block.data();
+        for i in 0..size {
+            bgd_raw[i] = data[i + (size * index as usize)];
+        }
+
+        unsafe { transmute::<[u8; 32], Self>(bgd_raw) }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
-#[repr(C, packed)]
-struct InodeTable {
+#[repr(C)]
+struct Inode {
     mode: Imode,
     uid: u16,
     size: u32,
@@ -175,13 +315,24 @@ struct InodeTable {
     links_count: u16,
     blocks: u32,
     flags: Iflags,
-    osd1: u32,
+    #[debug(skip)]
+    _reserved_1: u32, // os specific, reserved on linux reserved for use
     block: [u32; 15],
     generation: u32,
     file_acl: u32,
     dir_acl: u32,
     faddr: u32,
-    osd2: [u8; 12],
+    // os specific values, we will copy linux
+    frag_num: u8,
+    frag_size: u8,
+    #[debug(skip)]
+    _reserved_2: u16,
+    uid_hi: u32,
+    gid_hi: u32,
+    #[debug(skip)]
+    _reserved_3: u64,
+    #[debug(skip)]
+    _reserved_4: [u8; 120], // padding FIXME: should not be here but makes our simple case easier
 }
 
 enum ReservedInodes {
@@ -245,7 +396,7 @@ bitflags::bitflags! {
 }
 
 #[derive(Debug, Clone, Copy)]
-#[repr(C, packed)]
+#[repr(C)]
 struct LinkedDirectoryEntry {
     inode: u32,
     rec_len: u16,
@@ -254,7 +405,7 @@ struct LinkedDirectoryEntry {
     name: [u8; 0], // variable len 0-255 based on name_len
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
 enum FileType {
     Unknown = 0, // unknown file type
