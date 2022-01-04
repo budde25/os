@@ -6,6 +6,7 @@
 #![feature(abi_x86_interrupt)]
 #![feature(alloc_error_handler)]
 #![feature(const_mut_refs)]
+#![feature(int_roundings)]
 #![test_runner(crate::common::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 #![allow(dead_code)]
@@ -72,13 +73,13 @@ pub extern "C" fn kmain() -> ! {
     // enable ide driver
     disk::ide_init();
 
+    disk::ide_test();
     kprintln!("Current time: {}", io::current_time());
 
     // start addional processors
     // TODO: finish ap functionality
     // proc::ap_startup();
 
-    // disk::ide_test();
     // enable interrupts
     interrupts::enable_interrupts();
 
@@ -89,6 +90,8 @@ pub extern "C" fn kmain() -> ! {
 
     let mut executor = Executor::new();
     executor.spawn(Task::new(io::keyboard::print_keypresses()));
+    //executor.spawn(Task::new(disk::ide::page_handler()));
+    //executor.spawn(Task::new(disk::ide_test()));
     executor.run();
 }
 

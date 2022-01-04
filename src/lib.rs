@@ -8,6 +8,7 @@
 #![feature(alloc_error_handler)]
 #![feature(const_mut_refs)]
 #![feature(panic_info_message)]
+#![feature(int_roundings)]
 
 core::arch::global_asm!(include_str!("arch/x86_64/boot_32.s"));
 core::arch::global_asm!(include_str!("arch/x86_64/boot_64.s"));
@@ -16,6 +17,7 @@ core::arch::global_asm!(include_str!("arch/x86_64/trampoline.s"));
 // export some common functionality
 pub use address::PhysicalAddress;
 pub use address::VirtualAddress;
+use test::test_main;
 
 extern crate alloc;
 

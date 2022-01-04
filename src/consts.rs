@@ -19,5 +19,6 @@ pub const IRQ_0: u8 = 32;
 pub use crate::interrupts::idt::InterruptIndex as IRQ;
 
 //
-pub const ROOTINO: usize = 1; // root i node number
-pub const BSIZE: usize = 512;
+pub const ROOTINO: usize = 2; // root i node number
+pub const SSIZE: usize = 512; // sector size
+pub const BSIZE: usize = 512 * 2; // buffer size

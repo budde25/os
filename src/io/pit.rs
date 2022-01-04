@@ -23,7 +23,7 @@ impl Pit {
         unsafe { self.channel_0.write(0x4) };
     }
 
-    pub fn is_done(&mut self) -> bool {
+    pub fn check_done(&mut self) -> bool {
         unsafe { self.mode_command.write(0xE2) };
         unsafe { self.channel_0.read() & 0b10000000 != 0 }
     }
