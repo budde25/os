@@ -232,7 +232,7 @@ impl SubAssign<u64> for VirtualAddress {
 impl Debug for VirtualAddress {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_tuple("VirtualAddress")
-            .field(&format_args!("{:#X}", self))
+            .field(&format_args!("{:#X}", self.0))
             .finish()
     }
 }

@@ -195,7 +195,7 @@ impl SubAssign<u64> for PhysicalAddress {
 impl Debug for PhysicalAddress {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("PhysicalAddress")
-            .field("address", &format_args!("{:#X}", self))
+            .field("address", &format_args!("{:#X}", self.0))
             .field("section", &self.section())
             .finish()
     }

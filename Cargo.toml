@@ -15,9 +15,11 @@ derive_more = "0.99"
 conquer-once = { default-features = false, version = "0.3.2" }
 crossbeam-queue = { default-features = false, features = ["alloc"], version="0.3.2"}
 futures-util = {default-features = false, features = ["alloc"], version = "0.3.4"}
+custom_debug_derive = "0.5.0"
 
 # local libs
 port = { path = "lib/port" }
+bitmap = {path = "lib/bitmap"}
 block-alloc = { git = "ssh://git@github.com/budde25/alloc.git" }
 
 [profile.dev]
