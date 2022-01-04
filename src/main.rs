@@ -76,7 +76,7 @@ pub extern "C" fn kmain() -> ! {
     disk::ide_test();
     kprintln!("Current time: {}", io::current_time());
 
-    // start addional processors
+    // start additional processors
     // TODO: finish ap functionality
     // proc::ap_startup();
 

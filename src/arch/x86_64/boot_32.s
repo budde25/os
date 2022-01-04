@@ -188,7 +188,7 @@ load_gdt64:
     lgdt [gdt_64_pointer]
     ret
 
-# prints 'Err: ' and an error code stored in al regiester
+# prints 'Err: ' and an error code stored in al register
 error:
     mov dword ptr [VGA], 0x4f524f45
     mov dword ptr [VGA + 4], 0x4f3a4f52

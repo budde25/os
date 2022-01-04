@@ -28,7 +28,7 @@ bitflags::bitflags! {
     pub struct Rflags: u64 {
         const CF = (1 << 0); // carry flag
         const PF = (1 << 2); // parity flag
-        const AF = (1 << 4); // auxilary flag
+        const AF = (1 << 4); // auxiliary flag
         const ZF = (1 << 6); // zero flag
         const SF = (1 << 7); // sign flag
         const TF = (1 << 8); // trap flag

@@ -1,4 +1,4 @@
-/// Fat 32 implemenation
+/// Fat 32 implementation
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
@@ -18,7 +18,7 @@ pub struct BiosParameterBlock {
     hidden_sectors: u32,
     total_sectors: u32,
 
-    /// Extended boot record, should be right after BiosParameterBlcok
+    /// Extended boot record, should be right after BiosParameterBlock
     fatsz: u32, // the count of sectors occupied by ONE FAT
     ext_flags: u16,
     version_minor: u8,
@@ -43,7 +43,7 @@ struct FsInfo {
     _reserved_1: [u8; 480], // should be zero
     struct_signature: u32,  // should always be 0x61417272
     free_count: u32,        // last known free cluster, if 0xFFFFFFFF must be computed
-    next_free: u32, // hint cluster number where we should look for anter free cluster, if 0xFFFFFFFF we should start at 2
+    next_free: u32, // hint cluster number where we should look for enter free cluster, if 0xFFFFFFFF we should start at 2
     trail_signature: u32, // should always ve 0xAA550000
 }
 

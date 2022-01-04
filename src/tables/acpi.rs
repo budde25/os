@@ -112,7 +112,7 @@ impl ACPISDTHeader {
         self.length
     }
 
-    /// Returns true if the table is valid, false otherswise
+    /// Returns true if the table is valid, false otherwise
     pub fn is_valid(&self) -> u64 {
         let mut sum: u64 = 0;
         let mut ptr = self as *const ACPISDTHeader as *mut u8;

@@ -42,7 +42,7 @@ impl Executor {
         while let Some(task_id) = task_queue.pop() {
             let task = match tasks.get_mut(&task_id) {
                 Some(task) => task,
-                None => continue, // task no longer exitsts
+                None => continue, // task no longer exists
             };
 
             let waker = waker_cache

@@ -444,7 +444,7 @@ pub mod handlers {
         lapic_eoi();
     }
 
-    /// Send a end of intterupt to the local apic
+    /// Send a end of interrupt to the local apic
     pub fn lapic_eoi() {
         unsafe { (*crate::io::LAPIC.as_mut_ptr()).end_of_interrupt() };
     }

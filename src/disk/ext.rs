@@ -374,7 +374,7 @@ bitflags::bitflags! {
 bitflags::bitflags! {
     struct Iflags: u32 {
         const SECRM        = 0x00000001; // secure deletion
-        const UNRM         = 0x00000002; // recored to undelete
+        const UNRM         = 0x00000002; // record to undelete
         const COMPR        = 0x00000004; // compress file
         const SYNC         = 0x00000008; // synchronous updates
         const IMMUTABLE    = 0x00000010; // immutable file
@@ -382,12 +382,12 @@ bitflags::bitflags! {
         const NODUMP       = 0x00000040; // do not dump / delete file
         const NOATIME      = 0x00000080; // do not update i_atime
         // reserved for compression
-        const DIRTY        = 0x00000100; // dity (modified)
-        const COMPRBLK     = 0x00000200; // compressd blocks
+        const DIRTY        = 0x00000100; // dirty (modified)
+        const COMPRBLK     = 0x00000200; // compressed blocks
         const NOCOMPR      = 0x00000400; // access raw compressed data
         const ECOMPR       = 0x00000800; // compression error
-        // end compressrion flags
-        const BTREE        = 0x00001000; // b-tree formate directory
+        // end compression flags
+        const BTREE        = 0x00001000; // b-tree format directory
         const INDEX        = 0x00001000; // hash indexed directory
         const IMAGIC       = 0x00002000; // AFS directory
         const JOURNAL_DATA = 0x00004000; // journal file data

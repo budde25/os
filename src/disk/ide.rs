@@ -45,7 +45,7 @@ bitflags! {
         const MCR   = 0x08; // Media change request
         const IDNF  = 0x10; // ID mark not found
         const MC    = 0x20; // Media changed
-        const UNC   = 0x40; // Unccorrectable data
+        const UNC   = 0x40; // Uncorrectable data
         const BBK   = 0x80; // Bad block
     }
 }
@@ -89,7 +89,7 @@ bitflags! {
 }
 
 pub struct Ata {
-    primary: bool,                      // primary if true, seconday if false
+    primary: bool,                      // primary if true, secondary if false
     data: Port<u16>,                    // index 0
     error: PortReadOnly<u8>,            // index 1
     features: PortWriteOnly<u8>,        // index 1

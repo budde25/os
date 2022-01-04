@@ -58,7 +58,7 @@ impl MultiAPIC {
                     let ioapic_entry = unsafe { *item.as_ptr::<IoapicEntry>() };
                     self.ioapic_addr = ioapic_entry.address();
                 }
-                MadtEntryType::IoapicIntSrcOveride => {}
+                MadtEntryType::IoapicIntSrcOverride => {}
                 MadtEntryType::IoapicNonMaskIntSrc => {}
                 MadtEntryType::LapicNonMaskInts => {}
                 MadtEntryType::LapicAddrOveride => {
@@ -119,7 +119,7 @@ pub struct MadtEntryHeader {
 pub enum MadtEntryType {
     Lapic = 0,
     Ioapic = 1,
-    IoapicIntSrcOveride = 2,
+    IoapicIntSrcOverride = 2,
     IoapicNonMaskIntSrc = 3,
     LapicNonMaskInts = 4,
     LapicAddrOveride = 5,
@@ -153,7 +153,7 @@ impl IoapicEntry {
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
-pub struct IoapicIntSrcOverideEntry {
+pub struct IoapicIntSrcOverrideEntry {
     header: MadtEntryHeader,
     bus_source: u8,
     irq_source: u8,

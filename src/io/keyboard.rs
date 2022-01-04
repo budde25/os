@@ -79,7 +79,7 @@ const SHIFT_MAP: [u8; 256] = [
 bitflags! {
     struct KeyboardState: u8 {
         const NO = 0;
-        // modifers
+        // modifiers
         const SHIFT = 1<<0;
         const CTRL = 1<<1;
         const ALT = 1<<2;
