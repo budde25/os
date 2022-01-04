@@ -5,6 +5,7 @@ use crossbeam_queue::ArrayQueue;
 use port::{Port, PortReadOnly, PortWriteOnly};
 
 use super::buf::Buffer;
+use crate::consts::{BSIZE, SSIZE};
 
 struct IdeDevice {
     _reserved: u8,     // 0 (Empty) or 1 (This Drive really exists).
@@ -160,17 +161,21 @@ impl Ata {
         unsafe { Status::from_bits_truncate(self.status.read()) }
     }
 
-    pub fn read(&mut self, lba: u32, buf: &mut [u8; 512]) {
-        let buf = unsafe { core::mem::transmute::<&mut [u8; 512], &mut [u16; 256]>(buf) };
-        self.setup_access(0, lba).unwrap();
-        self._read(buf).unwrap();
+    pub fn read(&mut self, lba: u32, buf: &mut [u8; BSIZE]) {
+        let buf = unsafe { core::mem::transmute::<&mut [u8; BSIZE], &mut [u16; BSIZE / 2]>(buf) };
+        let num_sects = BSIZE / SSIZE;
+        self.setup_access(0, lba, num_sects as u8).unwrap();
+        self._read(buf, num_sects).unwrap();
     }
 
-    fn _read(&mut self, buf: &mut [u16; 256]) -> Result<(), u64> {
-        let num_sects = 1; // TODO: allow for bigger reads in the future
-        for _ in 0..num_sects {
+    fn _read(&mut self, buf: &mut [u16; SSIZE], num_sects: usize) -> Result<(), u64> {
+        let mut tbuf: [u16; 256] = [0; 256];
+        for i in 0..num_sects {
             self.poll(true)?;
-            unsafe { self.data.reads(buf) };
+            unsafe { self.data.reads(&mut tbuf) };
+            for j in 0..256 {
+                buf[j + (256 * i)] = tbuf[j]
+            }
         }
         unsafe { self.command.write(Command::CACHE_FLUSH.bits()) };
         self.poll(false)?;
@@ -178,33 +183,42 @@ impl Ata {
         Ok(())
     }
 
-    pub fn write(&mut self, lba: u32, buf: &[u8; 512]) {
-        let buf = unsafe { core::mem::transmute::<&[u8; 512], &[u16; 256]>(buf) };
-        self.setup_access(1, lba).unwrap();
-        self._write(buf).unwrap();
+    pub fn write(&mut self, lba: u32, buf: &[u8; BSIZE]) {
+        let buf = unsafe { core::mem::transmute::<&[u8; BSIZE], &[u16; BSIZE / 2]>(buf) };
+        let num_sects = BSIZE / SSIZE;
+
+        self.setup_access(1, lba, num_sects as u8).unwrap();
+        self._write(buf, num_sects).unwrap();
     }
 
-    fn _write(&mut self, buf: &[u16; 256]) -> Result<(), u64> {
-        let num_sects = 1; // TODO: allow for bigger reads in the future
-        for _ in 0..num_sects {
+    fn _write(&mut self, buf: &[u16; SSIZE], num_sects: usize) -> Result<(), u64> {
+        let mut tbuf: [u16; 256] = [0; 256];
+        for i in 0..num_sects {
+            for j in 0..256 {
+                tbuf[j] = buf[j + (256 * i)];
+            }
             self.poll(false)?;
-            unsafe { self.data.writes(buf) };
+            unsafe { self.data.writes(&mut tbuf) };
         }
+
         unsafe { self.command.write(Command::CACHE_FLUSH.bits()) };
         self.poll(false)?;
 
         Ok(())
     }
 
-    fn setup_access(&mut self, direction: u8, lba: u32) -> Result<(), u64> {
+    fn setup_access(&mut self, direction: u8, lba: u32, num_sects: u8) -> Result<(), u64> {
         let lba_mode: u8; // 0: CHS, 1: LBA28, 2: LBA48
         let mut lba_io: [u8; 6] = [0; 6];
         let slavebit = 1; // 0 master, 1 slave
         let head: u8;
-        let num_sects = 1;
+        //let num_sects = 1;
 
         // disable iqs
-        self.disable_irq();
+        //self.disable_irq();
+        if num_sects == 2 {
+            assert_eq!(lba % 2, 0);
+        }
 
         // select lba mode
         if lba >= 0x10000000 {
@@ -375,10 +389,10 @@ pub fn read_write() {
     if let Some(buf_ref) = IDE_QUEUE.0.try_get().expect("array not init").pop() {
         let mut buf = buf_ref.borrow_mut();
         if buf.is_dirty() {
-            ide.write(buf.block_no(), buf.data());
+            ide.write(buf.block_no() * 2, buf.data_mut());
             buf.set_dirty(false);
         } else if !buf.is_valid() {
-            ide.read(buf.block_no(), buf.data());
+            ide.read(buf.block_no() * 2, buf.data_mut());
             buf.set_valid(true);
         }
     } else {

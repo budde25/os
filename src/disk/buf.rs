@@ -56,7 +56,11 @@ impl Buffer {
         self.flags.set(Flags::VALID, valid)
     }
 
-    pub fn data(&mut self) -> &mut [u8; BSIZE] {
+    pub fn data(&self) -> &[u8; BSIZE] {
+        &self.data
+    }
+
+    pub fn data_mut(&mut self) -> &mut [u8; BSIZE] {
         &mut self.data
     }
 }
