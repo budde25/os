@@ -1,11 +1,14 @@
+use alloc::sync::Arc;
 use bitflags::bitflags;
 use conquer_once::spin::OnceCell;
+use core::borrow::BorrowMut;
 use core::cell::RefCell;
 use crossbeam_queue::ArrayQueue;
 use port::{Port, PortReadOnly, PortWriteOnly};
 
 use super::buf::Buffer;
 use crate::consts::{BSIZE, SSIZE};
+use crate::disk::DiskIo;
 
 struct IdeDevice {
     _reserved: u8,     // 0 (Empty) or 1 (This Drive really exists).
@@ -161,13 +164,6 @@ impl Ata {
         unsafe { Status::from_bits_truncate(self.status.read()) }
     }
 
-    pub fn read(&mut self, lba: u32, buf: &mut [u8; BSIZE]) {
-        let buf = unsafe { core::mem::transmute::<&mut [u8; BSIZE], &mut [u16; BSIZE / 2]>(buf) };
-        let num_sects = BSIZE / SSIZE;
-        self.setup_access(0, lba, num_sects as u8).unwrap();
-        self._read(buf, num_sects).unwrap();
-    }
-
     fn _read(&mut self, buf: &mut [u16; SSIZE], num_sects: usize) -> Result<(), u64> {
         let mut tbuf: [u16; 256] = [0; 256];
         for i in 0..num_sects {
@@ -181,14 +177,6 @@ impl Ata {
         self.poll(false)?;
 
         Ok(())
-    }
-
-    pub fn write(&mut self, lba: u32, buf: &[u8; BSIZE]) {
-        let buf = unsafe { core::mem::transmute::<&[u8; BSIZE], &[u16; BSIZE / 2]>(buf) };
-        let num_sects = BSIZE / SSIZE;
-
-        self.setup_access(1, lba, num_sects as u8).unwrap();
-        self._write(buf, num_sects).unwrap();
     }
 
     fn _write(&mut self, buf: &[u16; SSIZE], num_sects: usize) -> Result<(), u64> {
@@ -330,33 +318,41 @@ impl Ata {
     }
 }
 
-struct IdeQueue(OnceCell<ArrayQueue<&'static RefCell<Buffer>>>);
-unsafe impl Sync for IdeQueue {}
+impl DiskIo<BSIZE> for Ata {
+    fn read(&mut self, lba: u32, buf: &mut [u8; BSIZE]) {
+        let buf = unsafe { core::mem::transmute::<&mut [u8; BSIZE], &mut [u16; BSIZE / 2]>(buf) };
+        let num_sects = BSIZE / SSIZE;
+        self.setup_access(0, lba, num_sects as u8).unwrap();
+        self._read(buf, num_sects).unwrap();
+    }
 
-impl IdeQueue {
-    const fn uninit() -> Self {
-        Self(OnceCell::uninit())
+    fn write(&mut self, lba: u32, buf: &[u8; BSIZE]) {
+        let buf = unsafe { core::mem::transmute::<&[u8; BSIZE], &[u16; BSIZE / 2]>(buf) };
+        let num_sects = BSIZE / SSIZE;
+
+        self.setup_access(1, lba, num_sects as u8).unwrap();
+        self._write(buf, num_sects).unwrap();
     }
 }
 
-static IDE_QUEUE: IdeQueue = IdeQueue::uninit();
+static mut IDE_QUEUE: OnceCell<ArrayQueue<Arc<RefCell<Buffer>>>> = OnceCell::uninit();
 
 pub fn ide_queue_init() {
-    IDE_QUEUE
-        .0
-        .try_init_once(|| ArrayQueue::new(100))
-        .expect("IdeStream::new() should only be called once");
+    unsafe {
+        IDE_QUEUE
+            .try_init_once(|| ArrayQueue::new(100))
+            .expect("IdeStream::new() should only be called once");
+    }
 }
 
-pub fn add_ide_queue(buf: &'static RefCell<Buffer>) {
+pub fn add_ide_queue(buf: Arc<RefCell<Buffer>>) {
     {
-        let b = buf.borrow();
-        if !b.is_dirty() && b.is_valid() {
+        if !buf.borrow().is_dirty() && buf.borrow().is_valid() {
             panic!("nothing to do")
         }
 
-        if let Ok(queue) = IDE_QUEUE.0.try_get() {
-            if queue.push(buf).is_err() {
+        if let Ok(queue) = unsafe { IDE_QUEUE.try_get() } {
+            if queue.push(buf.clone()).is_err() {
                 crate::kprintln!("ide queue full")
             }
         } else {
@@ -366,9 +362,9 @@ pub fn add_ide_queue(buf: &'static RefCell<Buffer>) {
 
     read_write();
 
-    let b = buf.borrow();
-    while b.is_dirty() || !b.is_valid() {
+    while buf.borrow().is_dirty() || !buf.borrow().is_valid() {
         // sleep
+        crate::kprintln!("{}", buf.borrow().is_dirty())
     }
 }
 
@@ -381,19 +377,22 @@ pub fn interrupt_handler() {
 pub fn read_write() {
     use super::IDE;
 
+    // TODO: reevaluate if this is working as expected
     if IDE.is_locked() {
-        panic!("IDE locked");
+        //kdbg!("r/w failed");
+        return;
+        //panic!("IDE locked");
     }
 
     let mut ide = IDE.lock();
-    if let Some(buf_ref) = IDE_QUEUE.0.try_get().expect("array not init").pop() {
-        let mut buf = buf_ref.borrow_mut();
-        if buf.is_dirty() {
-            ide.write(buf.block_no() * 2, buf.data_mut());
-            buf.set_dirty(false);
-        } else if !buf.is_valid() {
-            ide.read(buf.block_no() * 2, buf.data_mut());
-            buf.set_valid(true);
+    if let Some(buf) = unsafe { IDE_QUEUE.try_get().expect("array not init").pop() } {
+        let mut buffer = buf.try_borrow_mut().unwrap();
+        if buffer.is_dirty() {
+            ide.write(buffer.block_no() * 2, buffer.data());
+            buffer.borrow_mut().set_dirty(false);
+        } else if !buffer.is_valid() {
+            ide.read(buffer.block_no() * 2, buffer.data_mut());
+            buffer.set_valid(true);
         }
     } else {
         return;

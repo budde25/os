@@ -1,4 +1,6 @@
+use core::mem::transmute_copy;
 
+use bitmap::Bitmap;
 use custom_debug_derive::Debug;
 use staticvec::StaticVec;
 
@@ -9,11 +11,13 @@ const BLOCK_SIZE: usize = 1024;
 const INODE_SIZE: usize = 256;
 
 pub fn ext_test() {
+    use crate::kdbg;
 
-
-    let _ext = Ext::new(1);
-    // let i = ext.read_inode(2);
-    //kdbg!(i);
+    let ext = Ext::new(1);
+    //kdbg!(ext.block_groups[0].block_bitmap(1));
+    //kdbg!(ext.block_groups[0].inode_bitmap(1));
+    let i = ext.read_inode(2);
+    kdbg!(i);
 }
 
 pub struct Ext {
@@ -35,18 +39,17 @@ impl Ext {
 
         // assert we have a valid ext2 superblock
         assert_eq!(superblock.verify(), true);
-
         // FIXME: core logic relies on this being the same.
         assert_eq!(
             core::mem::size_of::<Inode>(),
             superblock.inode_size as usize
         );
-
-        crate::kdbg!(superblock);
-
         assert_eq!(superblock.block_size() as usize, BLOCK_SIZE);
+        // must be on version 1 or newer of ext2
+        assert!(superblock.rev_level >= 1);
 
-        crate::kdbg!(&block_groups);
+        //crate::kdbg!(superblock);
+        //crate::kdbg!(&block_groups);
 
         Self {
             device,
@@ -60,23 +63,28 @@ impl Ext {
         self.read_inode(2);
     }
 
-    fn read_inode(&self, inode: usize) -> Inode {
+    fn read_inode(&self, inode: u32) -> Minode {
         use super::BUFFERS;
         let block_no = self.block_containing_inode(inode);
 
         let block_group = self.block_group_containing_inode(inode);
-        let _inode_table = block_group.inode_table;
+        let inode_table = block_group.inode_table;
+
+        // we know the starting block, 4 inodes fit into one block
+        let disk_block = inode_table + block_no;
+        let disk_index = (inode - 1) % 4;
 
         let mut bufs = BUFFERS.lock();
-        let buf = bufs.read(self.device, block_no as u32);
+        let buf = bufs.read(self.device, disk_block);
         let b = buf.borrow();
 
         let mut inode_raw: [u8; 256] = [0; 256];
         for i in 0..inode_raw.len() {
-            inode_raw[i] = b.data()[i];
+            inode_raw[i] = b.data()[i + (256 * disk_index as usize)];
         }
 
-        unsafe { core::intrinsics::transmute::<[u8; 256], Inode>(inode_raw) }
+        let node = unsafe { core::intrinsics::transmute::<[u8; 256], Inode>(inode_raw) };
+        node.into_minode(self.device, inode)
     }
 
     /// zero a block
@@ -88,15 +96,15 @@ impl Ext {
         bcache::BufferCache::write(b);
     }
 
-    fn block_group_containing_inode(&self, inode: usize) -> &BlockGroupDescriptor {
-        let block_group = (inode - 1) / self.superblock.inodes_per_group as usize;
-        &self.block_groups[block_group]
+    fn block_group_containing_inode(&self, inode: u32) -> &BlockGroupDescriptor {
+        let block_group = (inode - 1) / self.superblock.inodes_per_group;
+        &self.block_groups[block_group as usize]
     }
 
-    fn block_containing_inode(&self, inode: usize) -> usize {
-        let index = (inode - 1) % self.superblock.inodes_per_group as usize;
+    fn block_containing_inode(&self, inode: u32) -> u32 {
+        let index = (inode - 1) % self.superblock.inodes_per_group;
         let containing_block =
-            (index * self.superblock.inode_size as usize) / self.superblock.block_size() as usize;
+            (index * self.superblock.inode_size as u32) / self.superblock.block_size() as u32;
         containing_block
     }
 }
@@ -289,7 +297,7 @@ impl BlockGroupDescriptor {
 
         let mut b = super::BUFFERS.lock();
         // the group descriptor will in block 4
-        let block = b.read(device, 4).borrow();
+        let block = b.read(device, 2).borrow();
 
         let mut bgd_raw: [u8; 32] = [0; 32];
         let data = block.data();
@@ -299,11 +307,23 @@ impl BlockGroupDescriptor {
 
         unsafe { transmute::<[u8; 32], Self>(bgd_raw) }
     }
+
+    pub fn block_bitmap(&self, device: u32) -> Bitmap<BSIZE> {
+        let mut b = super::BUFFERS.lock();
+        let block = b.read(device, self.block_bitmap);
+        unsafe { transmute_copy(block.borrow().data()) }
+    }
+
+    pub fn inode_bitmap(&self, device: u32) -> Bitmap<BSIZE> {
+        let mut b = super::BUFFERS.lock();
+        let block = b.read(device, self.inode_bitmap);
+        unsafe { transmute_copy(block.borrow().data()) }
+    }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 #[repr(C)]
-struct Inode {
+pub struct Inode {
     mode: Imode,
     uid: u16,
     size: u32,
@@ -313,26 +333,57 @@ struct Inode {
     dtime: u32,
     gid: u16,
     links_count: u16,
-    blocks: u32,
+    blocks: u32, // amount of 512 byte blocks of data this inode uses
     flags: Iflags,
     #[debug(skip)]
     _reserved_1: u32, // os specific, reserved on linux reserved for use
-    block: [u32; 15],
+    direct_blocks: [u32; 12],
+    indirect_block: u32,
+    double_indirect_block: u32,
+    triple_indirect_block: u32,
     generation: u32,
     file_acl: u32,
-    dir_acl: u32,
+    dir_acl: u32, // file size high, for files zero otherwise (on rev >= 1)
     faddr: u32,
     // os specific values, we will copy linux
-    frag_num: u8,
-    frag_size: u8,
     #[debug(skip)]
-    _reserved_2: u16,
+    _reserved_2: u32, // u8: frag_num, u8: fragsize
     uid_hi: u32,
     gid_hi: u32,
     #[debug(skip)]
     _reserved_3: u64,
     #[debug(skip)]
     _reserved_4: [u8; 120], // padding FIXME: should not be here but makes our simple case easier
+}
+
+impl Inode {
+    /// add data to convert this to an in memory inode (Minode)
+    fn into_minode(self, device: u32, inum: u32) -> Minode {
+        Minode {
+            device,
+            inum,
+            ref_cnt: 1, // TODO: verify we should be at 1?
+            valid: true,
+            dirty: false,
+            // transfer the rest
+            mode: self.mode,
+            uid: self.uid as u64 | ((self.uid_hi as u64) << 16),
+            gid: self.gid as u64 | ((self.gid_hi as u64) << 16),
+            size: self.size as u64 | ((self.dir_acl as u64) << 32),
+            atime: self.atime,
+            ctime: self.ctime,
+            mtime: self.mtime,
+            dtime: self.dtime,
+            links_count: self.links_count,
+            flags: self.flags,
+            blocks: self.blocks,
+            direct_blocks: self.direct_blocks,
+            indirect_block: self.indirect_block,
+            double_indirect_block: self.double_indirect_block,
+            triple_indirect_block: self.triple_indirect_block,
+            file_acl: self.file_acl,
+        }
+    }
 }
 
 enum ReservedInodes {
@@ -345,7 +396,7 @@ enum ReservedInodes {
 }
 
 bitflags::bitflags! {
-    struct Imode: u16 {
+    pub struct Imode: u16 {
         // access rights
         const XOTH  = 0x0001; // others execute
         const WOTH  = 0x0002; // others write
@@ -372,7 +423,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
-    struct Iflags: u32 {
+    pub struct Iflags: u32 {
         const SECRM        = 0x00000001; // secure deletion
         const UNRM         = 0x00000002; // record to undelete
         const COMPR        = 0x00000004; // compress file
@@ -405,6 +456,23 @@ struct LinkedDirectoryEntry {
     name: [u8; 0], // variable len 0-255 based on name_len
 }
 
+impl LinkedDirectoryEntry {
+    fn name(&self) -> &'static str {
+        let ptr = &self.name as *const u8;
+        let name_slice = unsafe { core::slice::from_raw_parts(ptr, self.name_len as usize) };
+        unsafe { core::str::from_utf8_unchecked(name_slice) }
+    }
+
+    fn next_entry(&self) -> Option<Self> {
+        let ptr = self as *const Self as *mut u8;
+        let ptr = unsafe { ptr.add(self.rec_len as usize) };
+        // maybe?
+
+        unsafe { Some(*(ptr as *const Self)) }
+    }
+    // TODO: implement intoiterator
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
 enum FileType {
@@ -416,6 +484,94 @@ enum FileType {
     Fifo = 5,    // buffer file
     Sock = 6,    // socket file
     Symlink = 7, // symbolic link
+}
+
+// In memory copy of an inode
+#[derive(Debug, Clone)]
+struct Minode {
+    device: u32,
+    inum: u32, // inode number
+    ref_cnt: u32,
+    valid: bool,
+    dirty: bool,
+    // inode relevant data
+    mode: Imode,
+    uid: u64,
+    gid: u64,
+    size: u64,
+    atime: u32,
+    ctime: u32,
+    mtime: u32,
+    dtime: u32,
+    links_count: u16,
+    flags: Iflags,
+    blocks: u32, // amount of 512 byte blocks of data this inode uses
+    direct_blocks: [u32; 12],
+    indirect_block: u32,
+    double_indirect_block: u32,
+    triple_indirect_block: u32,
+    file_acl: u32,
+}
+
+impl Minode {
+    pub fn invaid() -> Self {
+        Self {
+            valid: false,
+            device: 0,
+            inum: 0,
+            ref_cnt: 0,
+            dirty: false,
+            // inode specific
+            mode: Imode::empty(),
+            uid: 0,
+            gid: 0,
+            size: 0,
+            atime: 0,
+            ctime: 0,
+            mtime: 0,
+            dtime: 0,
+            links_count: 0,
+            flags: Iflags::empty(),
+            blocks: 0,
+            direct_blocks: [0; 12],
+            indirect_block: 0,
+            double_indirect_block: 0,
+            triple_indirect_block: 0,
+            file_acl: 0,
+        }
+    }
+}
+
+impl Into<Inode> for Minode {
+    fn into(self) -> Inode {
+        Inode {
+            mode: self.mode,
+            uid: (self.uid & 0xFF) as u16,
+            size: (self.size & 0xFFFF) as u32,
+            atime: self.atime,
+            ctime: self.ctime,
+            mtime: self.mtime,
+            dtime: self.dtime,
+            gid: (self.gid & 0xFF) as u16,
+            links_count: self.links_count,
+            blocks: self.blocks,
+            flags: self.flags,
+            _reserved_1: 0,
+            direct_blocks: self.direct_blocks,
+            indirect_block: self.indirect_block,
+            double_indirect_block: self.double_indirect_block,
+            triple_indirect_block: self.triple_indirect_block,
+            generation: 0,
+            file_acl: self.file_acl,
+            dir_acl: (self.size >> 32) as u32,
+            faddr: 0,
+            _reserved_2: 0,
+            uid_hi: (self.uid >> 16) as u32,
+            gid_hi: (self.gid >> 16) as u32,
+            _reserved_3: 0,
+            _reserved_4: [0; 120],
+        }
+    }
 }
 
 #[cfg(test)]

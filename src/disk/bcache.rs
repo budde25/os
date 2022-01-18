@@ -1,51 +1,83 @@
-use super::buf::Buffer;
 use core::cell::RefCell;
-use staticvec::StaticVec;
 
-static mut BUFFERS: StaticVec<RefCell<Buffer>, 30> = StaticVec::new();
+use super::buf::Buffer;
+use alloc::sync::Arc;
+
+//static mut BUFFERS: StaticVec<RefCell<Buffer>, 30> = StaticVec::new();
 
 pub struct BufferCache {
-    _private: (),
+    buffers: [Option<(Arc<RefCell<Buffer>>, bool)>; 30],
+    index: usize,
 }
+
+unsafe impl Send for BufferCache {}
 
 impl BufferCache {
     pub const fn new() -> Self {
-        Self { _private: () }
+        const VALUE: Option<(Arc<RefCell<Buffer>>, bool)> = None;
+        let buffers = [VALUE; 30];
+        Self { buffers, index: 0 }
     }
 
-    unsafe fn get(&mut self, device: u32, block_no: u32) -> &'static RefCell<Buffer> {
+    fn capacity(&self) -> usize {
+        self.buffers.len()
+    }
+
+    /// clock algo
+    unsafe fn get(&mut self, device: u32, block_no: u32) -> Arc<RefCell<Buffer>> {
+        // TODO: remove, pure debug
+        let mut count = 0;
+        for opt in &self.buffers {
+            if opt.is_some() {
+                count += 1;
+            }
+        }
+        crate::kprintln!("num cached {}/30", count);
+
         // check the cache
-        for buf in &BUFFERS {
-            if buf.borrow().device() == device && buf.borrow().block_no() == block_no {
-                buf.borrow_mut().ref_inc();
-                return buf;
+        for opt in &self.buffers {
+            if let Some(tup) = opt {
+                if tup.0.borrow().device() == device && tup.0.borrow().block_no() == block_no {
+                    return tup.0.clone();
+                }
             }
         }
 
         //not cached, add to cache
-        let insert_buf = RefCell::new(Buffer::new(device, block_no));
-        BUFFERS.push(insert_buf);
-        // TODO this could probably be faster
-        for buf in &BUFFERS {
-            if buf.borrow().device() == device && buf.borrow().block_no() == block_no {
-                buf.borrow_mut().ref_inc();
-                return buf;
+        let new_buf = (Arc::new(RefCell::new(Buffer::new(device, block_no))), true);
+        let mut assure = 0; // TODO: remove once we are sure that this works as intended
+        while assure < self.capacity() * 3 {
+            self.index = (self.index + 1) % self.capacity();
+            if self.buffers[self.index].is_none() {
+                self.buffers[self.index] = Some(new_buf.clone());
+                return new_buf.0;
             }
-        }
 
-        unreachable!()
+            if let Some(tup) = &mut self.buffers[self.index] {
+                // we can replace
+                if tup.1 == false && !tup.0.borrow().is_dirty() {
+                    self.buffers[self.index] = Some(new_buf.clone());
+                    return new_buf.0;
+                } else {
+                    tup.1 = false; // clock algo emulates lru
+                }
+            }
+            assure += 1;
+        }
+        panic!("are we forgeting to flush pages?")
     }
 
-    pub fn read(&mut self, device: u32, block_no: u32) -> &'static RefCell<Buffer> {
+    pub fn read(&mut self, device: u32, block_no: u32) -> Arc<RefCell<Buffer>> {
         let buf = unsafe { self.get(device, block_no) };
         if !buf.borrow().is_valid() {
-            super::ide::add_ide_queue(buf);
+            super::ide::add_ide_queue(buf.clone());
         }
-
         buf
     }
 
-    pub fn write(buf: &'static RefCell<Buffer>) {
+    pub fn write(buf: Arc<RefCell<Buffer>>) {
+        let buf = buf;
+
         buf.borrow_mut().set_dirty(true);
         super::ide::add_ide_queue(buf);
     }
