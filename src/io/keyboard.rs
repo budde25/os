@@ -246,7 +246,10 @@ impl Keyboard {
         let mut c = match index {
             0 => NORMAL_MAP[scancode as usize],
             1 => SHIFT_MAP[scancode as usize],
-            2 => todo!(),
+            2 => {
+                crate::kprintln!("ctrl not implemented");
+                return None;
+            }
             3 => todo!(),
             _ => unreachable!(),
         };
