@@ -3,5 +3,6 @@
 
 .global start
 start:
-    cli
-    int 3
+    jmp spin
+spin:
+    jmp spin
