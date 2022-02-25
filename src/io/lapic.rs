@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use core::ops::{Index, IndexMut};
 
-use crate::PhysicalAddress;
+use crate::{PhysicalAddress, VirtualAddress};
 
 bitflags! {
     struct InterruptCommand: u32 {
@@ -150,6 +150,7 @@ impl Lapic {
 
     /// Start additional processors
     pub fn start_ap(&mut self, apic_id: u8, addr: PhysicalAddress) {
+        let addr: VirtualAddress = addr.into();
         // "The BSP must initialize CMOS shutdown code to 0AH
         // and the warm reset vector (DWORD based at 40:67) to point at
         // the AP startup code prior to the [universal startup algorithm]."

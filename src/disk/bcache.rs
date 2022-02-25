@@ -25,15 +25,6 @@ impl BufferCache {
 
     /// clock algo
     unsafe fn get(&mut self, device: u32, block_no: u32) -> Arc<RefCell<Buffer>> {
-        // TODO: remove, pure debug
-        let mut count = 0;
-        for opt in &self.buffers {
-            if opt.is_some() {
-                count += 1;
-            }
-        }
-        crate::kprintln!("num cached {}/30", count);
-
         // check the cache
         for opt in &self.buffers {
             if let Some(tup) = opt {

@@ -46,11 +46,11 @@ static PICS: Lazy<Mutex<Pics>> = Lazy::new(|| {
 
 /// Global local APIC, not need to may be mut static since it is unique per cpu
 /// must be initalized once
-pub static mut LAPIC: Lazy<Lapic> = Lazy::new(|| Lapic::default());
+pub static mut LAPIC: Lazy<Lapic> = Lazy::new(Lapic::default);
 
 /// Global IO APIC, not need to may be mut static since it is unique per cpu
 /// must be initalized once
-pub static mut IO_APIC: Lazy<IoApic> = Lazy::new(|| IoApic::default());
+pub static mut IO_APIC: Lazy<IoApic> = Lazy::new(IoApic::default);
 
 pub static mut CMOS: Cmos = Cmos::new();
 

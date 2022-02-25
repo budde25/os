@@ -7,7 +7,7 @@ pub struct Pit {
 }
 
 impl Pit {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         const PORT_NUM: u16 = 0x40;
         Self {
             channel_0: Port::new(PORT_NUM),
@@ -27,4 +27,10 @@ impl Pit {
         unsafe { self.mode_command.write(0xE2) };
         unsafe { self.channel_0.read() & 0b10000000 != 0 }
     }
+}
+
+impl Default for Pit {
+   fn default() -> Self {
+       Self::new()
+   } 
 }

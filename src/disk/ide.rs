@@ -394,7 +394,5 @@ pub fn read_write() {
             ide.read(buffer.block_no() * 2, buffer.data_mut());
             buffer.set_valid(true);
         }
-    } else {
-        return;
     }
 }
