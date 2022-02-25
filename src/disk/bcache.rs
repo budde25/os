@@ -46,7 +46,7 @@ impl BufferCache {
 
             if let Some(tup) = &mut self.buffers[self.index] {
                 // we can replace
-                if tup.1 == false && !tup.0.borrow().is_dirty() {
+                if !tup.1 && !tup.0.borrow().is_dirty() {
                     self.buffers[self.index] = Some(new_buf.clone());
                     return new_buf.0;
                 } else {
