@@ -13,8 +13,8 @@ lazy_static = { features = ["spin_no_std"], version = "1.4.0"}
 volatile = "0.4.4"
 derive_more = "0.99.17"
 conquer-once = { default-features = false, version = "0.3.2" }
-crossbeam-queue = { default-features = false, features = ["alloc"], version="0.3.3"}
-futures-util = {default-features = false, features = ["alloc"], version = "0.3.19"}
+crossbeam-queue = { default-features = false, features = ["alloc"], version="0.3.4"}
+futures-util = {default-features = false, features = ["alloc"], version = "0.3.21"}
 custom_debug_derive = "0.5.0"
 
 # local libs
