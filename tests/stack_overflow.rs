@@ -69,5 +69,5 @@ extern "x86-interrupt" fn test_double_fault_handler(
 ) -> ! {
     os::kprintln!("[ok]");
     exit_qemu(true);
-    loop {}
+    panic!();
 }
