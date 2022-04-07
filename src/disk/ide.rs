@@ -186,7 +186,7 @@ impl Ata {
                 tbuf[j] = buf[j + (256 * i)];
             }
             self.poll(false)?;
-            unsafe { self.data.writes(&mut tbuf) };
+            unsafe { self.data.writes(&tbuf) };
         }
 
         unsafe { self.command.write(Command::CACHE_FLUSH.bits()) };

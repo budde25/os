@@ -26,11 +26,9 @@ impl BufferCache {
     /// clock algo
     unsafe fn get(&mut self, device: u32, block_no: u32) -> Arc<RefCell<Buffer>> {
         // check the cache
-        for opt in &self.buffers {
-            if let Some(tup) = opt {
-                if tup.0.borrow().device() == device && tup.0.borrow().block_no() == block_no {
-                    return tup.0.clone();
-                }
+        for opt in self.buffers.iter().flatten() {
+            if opt.0.borrow().device() == device && opt.0.borrow().block_no() == block_no {
+                return opt.0.clone();
             }
         }
 

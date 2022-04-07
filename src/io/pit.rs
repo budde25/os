@@ -30,7 +30,7 @@ impl Pit {
 }
 
 impl Default for Pit {
-   fn default() -> Self {
-       Self::new()
-   } 
+    fn default() -> Self {
+        Self::new()
+    }
 }

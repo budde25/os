@@ -1,15 +1,15 @@
 use staticvec::StaticString;
 
 enum State {
-    UNUSED,
-    EMBRYO,
-    SLEEPING,
-    RUNNABLE,
-    RUNNING,
-    ZOMBIE,
+    Unused,
+    Embryo,
+    Sleeping,
+    Runable,
+    Running,
+    Zombie,
 }
 
-struct Process {
+pub(crate) struct Process {
     mem_size: usize,
     // pgdir
     // kstack
