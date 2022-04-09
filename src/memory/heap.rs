@@ -7,7 +7,7 @@ use block_alloc::Allocator as BlockAllocator;
 static ALLOCATOR: Allocator = Allocator::new();
 
 pub fn init() {
-    unsafe { ALLOCATOR.init(HEAP_START, HEAP_SIZE) };
+    unsafe { ALLOCATOR.init(HEAP_START as *mut u8, HEAP_SIZE) };
     crate::kprintln!(
         "Kernel heap initialized at {:#X}, of size {:#X}",
         HEAP_START,
@@ -26,7 +26,7 @@ impl Allocator {
         }
     }
 
-    pub unsafe fn init(&self, heap_start: u64, heap_size: u64) {
+    pub unsafe fn init(&self, heap_start: *mut u8, heap_size: u64) {
         self.allocator.lock().init(heap_start, heap_size)
     }
 }
