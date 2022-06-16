@@ -6,16 +6,31 @@ import sys
 import subprocess
 import shutil
 
-QEMU_ARGS = ["-serial", "mon:stdio", "-smp", "2", "-boot", "order=d", "-drive",
-             "file=fs.img,index=1,media=disk,format=raw", "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04"]
+QEMU_ARGS = [
+    "-serial",
+    "mon:stdio",
+    "-smp",
+    "2",
+    "-boot",
+    "order=d",
+    "-drive",
+    "file=fs.img,index=1,media=disk,format=raw",
+    "-device",
+    "isa-debug-exit,iobase=0xf4,iosize=0x04",
+]
 
 
 class X(object):
     def __init__(self):
         parser = argparse.ArgumentParser()
-        parser.add_argument('command', help='available commands')
+        parser.add_argument("command", help="available commands")
         parser.add_argument(
-            '-v', '--version', help='show version and exit', action='version', version='1.0'),
+            "-v",
+            "--version",
+            help="show version and exit",
+            action="version",
+            version="1.0",
+        ),
         # Read the first argument (add/commit)
         args = parser.parse_args(sys.argv[1:2])
         # use dispatch pattern to invoke method with same name of the argument
@@ -23,23 +38,23 @@ class X(object):
         getattr(self, args.command)()
 
     def doctor(self):
-        parser = argparse.ArgumentParser(description='doctor')
-        parser.add_argument('-f', '--file-name',
-                            required=True,   help='file to be added')
+        parser = argparse.ArgumentParser(description="doctor")
+        parser.add_argument("-f", "--file-name", required=True, help="file to be added")
         # we are inside a subcommand, so ignore the first argument and read the rest
         args = parser.parse_args(sys.argv[2:])
         doctor(args)
 
     def build(self):
-        parser = argparse.ArgumentParser(description='build')
+        parser = argparse.ArgumentParser(description="build")
         # we are inside a subcommand, so ignore the first argument and read the rest
         args = parser.parse_args(sys.argv[2:])
         build(args)
 
     def run(self):
-        parser = argparse.ArgumentParser(description='run')
-        parser.add_argument('--nox', help='run without x window',
-                            default=False, action='store_true')
+        parser = argparse.ArgumentParser(description="run")
+        parser.add_argument(
+            "--nox", help="run without x window", default=False, action="store_true"
+        )
         args = parser.parse_args(sys.argv[2:])
         run(args)
 
@@ -59,10 +74,32 @@ def build(args):
     subprocess.run(["cargo", "build"], check=True)
     os.makedirs(f"{target_dir()}/isofiles/boot/grub", exist_ok=True)
     shutil.copy(output_file(), f"{target_dir()}/isofiles/boot/os.bin")
-    shutil.copy(f"{get_root()}/src/arch/x86_64/grub.cfg",
-                f"{target_dir()}/isofiles/boot/grub")
+    shutil.copy(
+        f"{get_root()}/src/arch/x86_64/grub.cfg", f"{target_dir()}/isofiles/boot/grub"
+    )
+    try:
+        subprocess.run(
+            [
+                "grub-mkrescue",
+                "-o",
+                f"{target_dir()}/os.iso",
+                f"{target_dir()}/isofiles",
+            ],
+            check=True,
+        )
+    except:
+        print("failed to run grub-mkrescue, trying grub2-mkrescue")
+
     subprocess.run(
-        ["grub-mkrescue", "-o", f"{target_dir()}/os.iso", f"{target_dir()}/isofiles"], check=True)
+        [
+            "grub2-mkrescue",
+            "-o",
+            f"{target_dir()}/os.iso",
+            f"{target_dir()}/isofiles",
+        ],
+        check=True,
+    )
+
     shutil.rmtree(f"{target_dir()}/isofiles")
 
 
@@ -100,5 +137,5 @@ def is_tool(name: str) -> bool:
     return which(name) is not None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
