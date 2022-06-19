@@ -39,10 +39,7 @@ static PANIC_VGA: Lazy<Mutex<Vga>> = Lazy::new(|| {
     Mutex::new(writer)
 });
 
-static PICS: Lazy<Mutex<Pics>> = Lazy::new(|| {
-    let pics = Pics::default();
-    Mutex::new(pics)
-});
+static PICS: Mutex<Pics> = Mutex::new(Pics::new());
 
 /// Global local APIC, not need to may be mut static since it is unique per cpu
 /// must be initalized once

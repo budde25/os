@@ -59,6 +59,13 @@ pub struct Pics {
 }
 
 impl Pics {
+    pub const fn new() -> Self {
+        Self {
+            main: Pic::pic_1(),
+            secondary: Pic::pic_2(),
+        }
+    }
+
     pub fn end_of_interrupt(&mut self, index: usize) {
         // we always send it to the master but the slave too if it came from there
         if index >= 8 {
@@ -86,10 +93,7 @@ impl Pics {
 
 impl Default for Pics {
     fn default() -> Self {
-        Self {
-            main: Pic::pic_1(),
-            secondary: Pic::pic_2(),
-        }
+        Self::new()
     }
 }
 
@@ -101,7 +105,7 @@ pub struct Pic {
 
 impl Pic {
     /// Create a new PIC
-    fn new(port: u16) -> Self {
+    const fn new(port: u16) -> Self {
         Self {
             command: Port::new(port),
             data: Port::new(port + 1),
@@ -109,12 +113,12 @@ impl Pic {
     }
 
     /// Master (IRQ 0-7)
-    pub fn pic_1() -> Self {
+    pub const fn pic_1() -> Self {
         Self::new(PicType::Pic1 as u16)
     }
 
     /// Salve (IRQ 8 -15)
-    pub fn pic_2() -> Self {
+    pub const fn pic_2() -> Self {
         Self::new(PicType::Pic2 as u16)
     }
 
