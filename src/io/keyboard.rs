@@ -10,7 +10,7 @@ use futures_util::task::AtomicWaker;
 use futures_util::StreamExt;
 use port::Port;
 
-const NO: u8 = 0;
+const NONE: u8 = 0;
 
 // Special keycodes
 const KEY_HOME: u8 = 0xE0;
@@ -24,56 +24,44 @@ const KEY_PGDN: u8 = 0xE7;
 const KEY_INS: u8 = 0xE8;
 const KEY_DEL: u8 = 0xE9;
 
+#[rustfmt::skip]
 const NORMAL_MAP: [u8; 256] = [
-    // 0x00
-    NO, 0x1B, b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'0', b'-', b'=', b'\x08',
-    b'\t', // 0x10
-    b'q', b'w', b'e', b'r', b't', b'y', b'u', b'i', b'o', b'p', b'[', b']', b'\n', NO, b'a', b's',
-    // 0x20
-    b'd', b'f', b'g', b'h', b'j', b'k', b'l', b';', b'\'', b'`', NO, b'\\', b'z', b'x', b'c', b'v',
-    // 0x30
-    b'b', b'n', b'm', b',', b'.', b'/', NO, b'*', NO, b' ', NO, NO, NO, NO, NO, NO, // 0x40
-    NO, NO, NO, NO, NO, NO, NO, b'7', b'8', b'9', b'-', b'4', b'5', b'6', b'+', b'1',
-    // 0x50
-    b'2', b'3', b'0', b'.', NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0x60
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0x70
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0x80
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0x90
-    NO, NO, NO, NO, NO, NO, NO, KEY_HOME, NO, NO, NO, NO, b'\n', NO, NO, NO, // 0xA0
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0xB0
-    NO, NO, NO, NO, NO, b'/', NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0xC0
-    NO, NO, NO, NO, NO, NO, NO, NO, KEY_UP, KEY_PGUP, NO, KEY_LF, NO, KEY_RT, NO, KEY_END,
-    // 0xD0
-    KEY_DN, KEY_PGDN, KEY_INS, KEY_DEL, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO,
-    // 0xE0
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0xF0
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0x100
+    NONE, 0x1B, b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', b'0', b'-', b'=', b'\x08', b'\t', // 0x10
+    b'q', b'w', b'e', b'r', b't', b'y', b'u', b'i', b'o', b'p', b'[', b']', b'\n', NONE, b'a', b's', // 0x20
+    b'd', b'f', b'g', b'h', b'j', b'k', b'l', b';', b'\'', b'`', NONE, b'\\', b'z', b'x', b'c', b'v', // 0x30
+    b'b', b'n', b'm', b',', b'.', b'/', NONE, b'*', NONE, b' ', NONE, NONE, NONE, NONE, NONE, NONE,   // 0x40
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, b'7', b'8', b'9', b'-', b'4', b'5', b'6', b'+', b'1', // 0x50
+    b'2', b'3', b'0', b'.', NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0x60
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0x70
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0x80
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0x90
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, KEY_HOME, NONE, NONE, NONE, NONE, b'\n', NONE, NONE, NONE, // 0xA0
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0xB0
+    NONE, NONE, NONE, NONE, NONE, b'/', NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0xC0
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, KEY_UP, KEY_PGUP, NONE, KEY_LF, NONE, KEY_RT, NONE, KEY_END, // 0xD0
+    KEY_DN, KEY_PGDN, KEY_INS, KEY_DEL, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0xE0
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0xF0
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0x100
 ];
 
+#[rustfmt::skip]
 const SHIFT_MAP: [u8; 256] = [
-    // 0x00
-    NO, 27, b'!', b'@', b'#', b'$', b'%', b'^', b'&', b'*', b'(', b')', b'_', b'+', b'\x08',
-    b'\t', // 0x10
-    b'Q', b'W', b'E', b'R', b'T', b'Y', b'U', b'I', b'O', b'P', b'{', b'}', b'\n', NO, b'A', b'S',
-    // 0x20
-    b'D', b'F', b'G', b'H', b'J', b'K', b'L', b':', b'"', b'~', NO, b'|', b'Z', b'X', b'C', b'V',
-    // 0x30
-    b'B', b'N', b'M', b'<', b'>', b'?', NO, b'*', NO, b' ', NO, NO, NO, NO, NO, NO, // 0x40
-    NO, NO, NO, NO, NO, NO, NO, b'7', b'8', b'9', b'-', b'4', b'5', b'6', b'+', b'1',
-    // 0x50
-    b'2', b'3', b'0', b'.', NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0x60
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0x70
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0x80
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0x90
-    NO, NO, NO, NO, NO, NO, NO, KEY_HOME, NO, NO, NO, NO, b'\n', NO, NO, NO, // 0xA0
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0xB0
-    NO, NO, NO, NO, NO, b'/', NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0xC0
-    NO, NO, NO, NO, NO, NO, NO, NO, KEY_UP, KEY_PGUP, NO, KEY_LF, NO, KEY_RT, NO, KEY_END,
-    // 0xD0
-    KEY_DN, KEY_PGDN, KEY_INS, KEY_DEL, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO,
-    // 0xE0
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0xF0
-    NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, NO, // 0x100
+    NONE, 27, b'!', b'@', b'#', b'$', b'%', b'^', b'&', b'*', b'(', b')', b'_', b'+', b'\x08', b'\t', // 0x10
+    b'Q', b'W', b'E', b'R', b'T', b'Y', b'U', b'I', b'O', b'P', b'{', b'}', b'\n', NONE, b'A', b'S', // 0x20
+    b'D', b'F', b'G', b'H', b'J', b'K', b'L', b':', b'"', b'~', NONE, b'|', b'Z', b'X', b'C', b'V', // 0x30
+    b'B', b'N', b'M', b'<', b'>', b'?', NONE, b'*', NONE, b' ', NONE, NONE, NONE, NONE, NONE, NONE, // 0x40
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, b'7', b'8', b'9', b'-', b'4', b'5', b'6', b'+', b'1', // 0x50
+    b'2', b'3', b'0', b'.', NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0x60
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0x70
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0x80
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0x90
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, KEY_HOME, NONE, NONE, NONE, NONE, b'\n', NONE, NONE, NONE, // 0xA0
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0xB0
+    NONE, NONE, NONE, NONE, NONE, b'/', NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0xC0
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, KEY_UP, KEY_PGUP, NONE, KEY_LF, NONE, KEY_RT, NONE, KEY_END, // 0xD0
+    KEY_DN, KEY_PGDN, KEY_INS, KEY_DEL, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0xE0
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0xF0
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, NONE, // 0x100
 ];
 
 bitflags! {
