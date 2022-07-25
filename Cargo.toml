@@ -7,19 +7,23 @@ version = "0.1.0"
 [dependencies]
 bit_field = "0.10.1"
 bitflags = "1.3.2"
-spin = "0.9.3"
-staticvec = { default-features = false, version = "0.11.5"}
-lazy_static = { features = ["spin_no_std"], version = "1.4.0"}
+spin = "0.9.4"
+staticvec = { default-features = false, version = "0.11.7" }
+lazy_static = { features = ["spin_no_std"], version = "1.4.0" }
 volatile = "0.4.5"
 derive_more = "0.99.17"
 conquer-once = { default-features = false, version = "0.3.2" }
-crossbeam-queue = { default-features = false, features = ["alloc"], version="0.3.5"}
-futures-util = {default-features = false, features = ["alloc"], version = "0.3.21"}
+crossbeam-queue = { default-features = false, features = [
+    "alloc",
+], version = "0.3.6" }
+futures-util = { default-features = false, features = [
+    "alloc",
+], version = "0.3.21" }
 custom_debug_derive = "0.5.0"
 
 # local libs
 port = { path = "lib/port" }
-bitmap = {path = "lib/bitmap"}
+bitmap = { path = "lib/bitmap" }
 block-alloc = { git = "ssh://git@github.com/budde25/alloc.git" }
 
 [profile.dev]
