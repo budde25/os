@@ -9,6 +9,7 @@
 #![feature(int_roundings)]
 #![test_runner(crate::common::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+#![feature(once_cell)]
 #![allow(dead_code)]
 
 core::arch::global_asm!(include_str!("arch/x86_64/boot_32.s"));

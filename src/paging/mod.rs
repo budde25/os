@@ -4,15 +4,12 @@ pub mod phys_frame;
 pub mod tlb;
 
 use allocator::Mapper;
-use lazy_static::lazy_static;
-use spin::Mutex;
+use spin::{Lazy, Mutex};
 
-lazy_static! {
-    pub static ref MAPPER: Mutex<Mapper> = {
-        let m = unsafe { Mapper::new() };
-        Mutex::new(m)
-    };
-}
+pub static MAPPER: Lazy<Mutex<Mapper>> = Lazy::new(|| {
+    let m = unsafe { Mapper::new() };
+    Mutex::new(m)
+});
 
 // Map all of physical memory to += phys mem offset
 pub fn map_all_physical_memory() {

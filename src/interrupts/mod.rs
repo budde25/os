@@ -1,7 +1,7 @@
 use bit_field::BitField;
 use core::arch::asm;
-use core::{fmt, usize};
-use lazy_static::lazy_static;
+use core::fmt;
+use spin::Lazy;
 
 use gdt::GlobalDescriptorTable;
 
@@ -99,78 +99,86 @@ impl fmt::Debug for SegmentSelector {
     }
 }
 
-lazy_static! {
-    pub static ref IDT: idt::InterruptDescriptorTable = {
-        use idt::handlers::*;
-        use idt::InterruptIndex;
+pub static IDT: Lazy<idt::InterruptDescriptorTable> = Lazy::new(|| {
+    use idt::handlers::*;
+    use idt::InterruptIndex;
 
-        let mut idt = idt::InterruptDescriptorTable::new();
-        idt.divide_by_zero.set_handler(divide_by_zero);
-        idt.debug.set_handler(debug);
-        idt.non_maskable_interrupt.set_handler(non_maskable_interrupt);
-        idt.breakpoint.set_handler(breakpoint);
-        idt.overflow.set_handler(overflow);
-        idt.bound_range_exceeded.set_handler(bound_range_exceeded);
-        idt.invalid_opcode.set_handler(invalid_opcode);
-        idt.device_not_available.set_handler(device_not_available);
+    let mut idt = idt::InterruptDescriptorTable::new();
+    idt.divide_by_zero.set_handler(divide_by_zero);
+    idt.debug.set_handler(debug);
+    idt.non_maskable_interrupt
+        .set_handler(non_maskable_interrupt);
+    idt.breakpoint.set_handler(breakpoint);
+    idt.overflow.set_handler(overflow);
+    idt.bound_range_exceeded.set_handler(bound_range_exceeded);
+    idt.invalid_opcode.set_handler(invalid_opcode);
+    idt.device_not_available.set_handler(device_not_available);
 
-        // double fault handler
-        idt.double_fault.set_handler(double_fault);
-        idt.double_fault.options.set_stack_index(DOUBLE_FAULT_IST_INDEX);
+    // double fault handler
+    idt.double_fault.set_handler(double_fault);
+    idt.double_fault
+        .options
+        .set_stack_index(DOUBLE_FAULT_IST_INDEX);
 
-        idt.invalid_tss.set_handler(invalid_tss);
-        idt.segment_not_present.set_handler(segment_not_present);
-        idt.stack_segment_fault.set_handler(stack_segment_fault);
-        idt.general_protection_fault.set_handler(general_protection_fault);
-        idt.page_fault.set_handler(page_fault);
-        idt.x87_floating_point.set_handler(x87_floating_point);
-        idt.alignment_check.set_handler(alignment_check);
-        idt.machine_check.set_handler(machine_check);
-        idt.simd_floating_point.set_handler(simd_floating_point);
-        idt.virtualization.set_handler(virtualization);
-        idt.security_exception.set_handler(security_exception);
+    idt.invalid_tss.set_handler(invalid_tss);
+    idt.segment_not_present.set_handler(segment_not_present);
+    idt.stack_segment_fault.set_handler(stack_segment_fault);
+    idt.general_protection_fault
+        .set_handler(general_protection_fault);
+    idt.page_fault.set_handler(page_fault);
+    idt.x87_floating_point.set_handler(x87_floating_point);
+    idt.alignment_check.set_handler(alignment_check);
+    idt.machine_check.set_handler(machine_check);
+    idt.simd_floating_point.set_handler(simd_floating_point);
+    idt.virtualization.set_handler(virtualization);
+    idt.security_exception.set_handler(security_exception);
 
-        // interrupt handlers
-        idt.interrupts[InterruptIndex::Timer as usize].set_handler(timer);
-        idt.interrupts[InterruptIndex::Keyboard as usize].set_handler(keyboard);
-        idt.interrupts[InterruptIndex::Ide as usize].set_handler(ide);
+    // interrupt handlers
+    idt.interrupts[InterruptIndex::Timer as usize].set_handler(timer);
+    idt.interrupts[InterruptIndex::Keyboard as usize].set_handler(keyboard);
+    idt.interrupts[InterruptIndex::Ide as usize].set_handler(ide);
 
-        idt
+    idt
+});
+
+pub static GDT: Lazy<(gdt::GlobalDescriptorTable, Selectors)> = Lazy::new(|| {
+    use gdt::{Entry, Flags};
+
+    let mut gdt = GlobalDescriptorTable::new();
+
+    // initialized to be empty and zero should be null anyway
+    let kernel_code_segment = gdt.push(Entry::new(0, Flags::CODE_PL_ZERO));
+    let kernel_data_segment = gdt.push(Entry::new(0, Flags::DATA_PL_ZERO));
+    gdt.push(Entry::new(0, Flags::CODE_PL_THREE));
+    gdt.push(Entry::new(0, Flags::DATA_PL_THREE));
+
+    // tss
+    let (tss_segment_1, tss_segment_2) = Entry::tss(&TSS);
+    let tss_segment = gdt.push(tss_segment_1);
+    gdt.push(tss_segment_2);
+
+    (
+        gdt,
+        Selectors {
+            kernel_code_segment,
+            kernel_data_segment,
+            tss_segment,
+        },
+    )
+});
+
+static TSS: Lazy<TaskStateSegment> = Lazy::new(|| {
+    let mut tss = TaskStateSegment::zero();
+
+    tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
+        const STACK_SIZE: usize = 4096 * 5;
+        static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+
+        let stack_start = unsafe { &STACK as *const _ as u64 };
+        stack_start + STACK_SIZE as u64
     };
-
-    pub static ref GDT: (gdt::GlobalDescriptorTable, Selectors) = {
-        use gdt::{Entry, Flags};
-
-        let mut gdt = GlobalDescriptorTable::new();
-
-        // initialized to be empty and zero should be null anyway
-        let kernel_code_segment = gdt.push(Entry::new(0, Flags::CODE_PL_ZERO));
-        let kernel_data_segment = gdt.push(Entry::new(0, Flags::DATA_PL_ZERO));
-        gdt.push(Entry::new(0, Flags::CODE_PL_THREE));
-        gdt.push(Entry::new(0, Flags::DATA_PL_THREE));
-
-        // tss
-        let (tss_segment_1, tss_segment_2) = Entry::tss(&TSS);
-        let tss_segment = gdt.push(tss_segment_1);
-        gdt.push(tss_segment_2);
-
-        (gdt, Selectors {kernel_code_segment, kernel_data_segment, tss_segment})
-    };
-
-    static ref TSS: TaskStateSegment = {
-        let mut tss = TaskStateSegment::zero();
-
-        tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
-            const STACK_SIZE: usize = 4096 * 5;
-            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
-
-            let stack_start = unsafe { &STACK as *const _ as u64};
-            stack_start + STACK_SIZE as u64
-        };
-        tss
-    };
-
-}
+    tss
+});
 
 pub fn disable_interrupts() {
     unsafe { asm!("cli", options(nomem, nostack)) };

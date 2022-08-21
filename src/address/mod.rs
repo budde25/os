@@ -1,8 +1,8 @@
-use lazy_static::lazy_static;
 use sections::Sections;
 
 // export up
 pub use phys::PhysicalAddress;
+use spin::Lazy;
 pub use virt::VirtualAddress;
 
 mod phys;
@@ -24,6 +24,4 @@ pub const fn align_up(addr: u64, align: u64) -> u64 {
     }
 }
 
-lazy_static! {
-    pub static ref SECTIONS: Sections = Sections::new();
-}
+pub static SECTIONS: Lazy<Sections> = Lazy::new(|| Sections::new());
