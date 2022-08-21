@@ -18,7 +18,7 @@ crossbeam-queue = { default-features = false, features = [
 ], version = "0.3.6" }
 futures-util = { default-features = false, features = [
     "alloc",
-], version = "0.3.21" }
+], version = "0.3.23" }
 custom_debug_derive = "0.5.0"
 
 # local libs
