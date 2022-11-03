@@ -37,7 +37,7 @@ impl PhysicalAddress {
 
     pub const fn as_ptr<T>(&self) -> *const T {
         use crate::consts::KERNEL_OFFSET;
-        (self.0 + KERNEL_OFFSET as u64) as *const T
+        (self.0 + KERNEL_OFFSET) as *const T
     }
 
     pub const fn as_mut_ptr<T>(&self) -> *mut T {

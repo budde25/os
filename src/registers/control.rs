@@ -55,7 +55,7 @@ impl Cr3 {
 
     pub unsafe fn write(frame: PhysFrame, flags: Cr3Flags) {
         let addr = frame.address();
-        let value = u64::from(addr) | flags.bits() as u64;
+        let value = u64::from(addr) | flags.bits();
         asm!("mov cr3, {}", in(reg) value, options(nostack, preserves_flags));
     }
 

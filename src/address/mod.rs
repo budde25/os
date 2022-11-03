@@ -24,4 +24,4 @@ pub const fn align_up(addr: u64, align: u64) -> u64 {
     }
 }
 
-pub static SECTIONS: Lazy<Sections> = Lazy::new(|| Sections::new());
+pub static SECTIONS: Lazy<Sections> = Lazy::new(Sections::new);

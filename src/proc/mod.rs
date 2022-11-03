@@ -3,9 +3,8 @@ mod process;
 mod tasks;
 
 use cpu::Cpu;
-use process::Process;
-
-use spin::Mutex;
+// use process::Process;
+// use spin::Mutex;
 
 use crate::PhysicalAddress;
 
