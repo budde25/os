@@ -1,5 +1,3 @@
-use staticvec::StaticString;
-
 enum State {
     Unused,
     Embryo,
@@ -16,5 +14,4 @@ pub(crate) struct Process {
     state: State,
     pid: usize,
     killed: bool,
-    name: StaticString<16>,
 }

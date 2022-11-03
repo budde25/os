@@ -6,12 +6,11 @@ use cpu::Cpu;
 use process::Process;
 
 use spin::Mutex;
-use staticvec::StaticVec;
 
 use crate::PhysicalAddress;
 
-static CPUS: StaticVec<Cpu, 8> = StaticVec::new();
-static PTABLE: Mutex<StaticVec<Process, 64>> = Mutex::new(StaticVec::new());
+//static CPUS: StaticVec<Cpu, 8> = StaticVec::new();
+//static PTABLE: Mutex<StaticVec<Process, 64>> = Mutex::new(StaticVec::new());
 
 pub fn ap_startup() {
     use crate::paging::allocator::Allocator;
