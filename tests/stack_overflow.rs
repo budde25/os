@@ -5,12 +5,12 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
-use lazy_static::lazy_static;
 use os::common::exit_qemu;
 use os::interrupts::errors::ExceptionStackFrame;
 use os::interrupts::idt::InterruptDescriptorTable;
 use os::interrupts::{gdt, DOUBLE_FAULT_IST_INDEX};
 use os::kprint;
+use spin::Lazy;
 
 static mut COUNTER: u64 = 0;
 
@@ -41,16 +41,14 @@ fn stack_overflow() {
     stack_overflow(); // for each recursion, the return address is pushed
 }
 
-lazy_static! {
-    static ref TEST_IDT: InterruptDescriptorTable = {
-        let mut idt = InterruptDescriptorTable::new();
-        idt.double_fault.set_handler(test_double_fault_handler);
-        idt.double_fault
-            .options
-            .set_stack_index(DOUBLE_FAULT_IST_INDEX);
-        idt
-    };
-}
+static TEST_IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
+    let mut idt = InterruptDescriptorTable::new();
+    idt.double_fault.set_handler(test_double_fault_handler);
+    idt.double_fault
+        .options
+        .set_stack_index(DOUBLE_FAULT_IST_INDEX);
+    idt
+});
 
 pub fn init() {
     use os::interrupts::GDT;
