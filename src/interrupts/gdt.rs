@@ -7,22 +7,22 @@ use bit_field::BitField;
 use bitflags::bitflags;
 use core::arch::asm;
 use core::fmt::{self, Debug, Formatter};
-use staticvec::StaticVec;
 
 #[derive(Debug, Clone, Hash)]
 #[repr(C)]
-pub struct GlobalDescriptorTable(StaticVec<Entry, 8>);
+pub struct GlobalDescriptorTable([Entry; 8], u8);
 
 impl GlobalDescriptorTable {
     pub const fn new() -> Self {
-        let mut gdt = StaticVec::new();
-        gdt.push(Entry::zero()); // push one null entry
-        Self(gdt)
+        let gdt = [Entry::zero(); 8];
+        //gdt[0] = Entry::zero(); // push one null entry
+        Self(gdt, 1)
     }
 
     pub const fn push(&mut self, entry: Entry) -> SegmentSelector {
-        let index = self.0.len();
-        self.0.push(entry);
+        let index = self.1;
+        self.0[self.1 as usize] = entry;
+        self.1 += 1;
         // TODO support more then just ring0
         SegmentSelector::new(index as u16, PrivilegeLevel::Ring0)
     }
@@ -31,7 +31,7 @@ impl GlobalDescriptorTable {
         use core::mem::size_of;
         DescriptorTablePointer {
             base: self.0.as_ptr() as u64,
-            limit: ((size_of::<Self>() * self.0.capacity()) - 1) as u16,
+            limit: ((size_of::<Self>() * self.0.len()) - 1) as u16,
         }
     }
 
