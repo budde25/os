@@ -10,7 +10,7 @@ QEMU_ARGS = [
     "-serial",
     "mon:stdio",
     "-smp",
-    "2",
+    "1",
     "-boot",
     "order=d",
     "-drive",
@@ -136,6 +136,35 @@ def is_tool(name: str) -> bool:
 
     return which(name) is not None
 
+def create_img():
+    # this will create a 100 MiB, MBR, Fat32 blank image
+    try:
+        subprocess.run(
+            [
+                "dd",
+                "if=/dev/zero",
+                "of=fs.img",
+                "iflag=fullblock",
+                "bs=1M",
+                "count=10"
+                "&&"
+                "sync"
+            ],
+            check=True,
+        )
+    except:
+        print("Failed to run dd")
+
+    try:
+        subprocess.run(
+            [
+                "mkfs.ext2",
+                "fs.img"
+            ],
+            check=True,
+        )
+    except:
+        print("Failed to run mkfs.ext2")
 
 if __name__ == "__main__":
     main()
