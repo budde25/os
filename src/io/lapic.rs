@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use core::ops::{Index, IndexMut};
 
-use crate::{PhysicalAddress, VirtualAddress};
+use x86_64::{PhysicalAddress, VirtualAddress};
 
 bitflags! {
     struct InterruptCommand: u32 {
@@ -192,7 +192,7 @@ impl Lapic {
 
 impl Default for Lapic {
     fn default() -> Self {
-        use crate::tables::MADT_TABLE;
+        use crate::multiboot::MADT_TABLE;
         let pa = MADT_TABLE.lapic_addr();
         let ptr = unsafe { &mut *pa.as_mut_ptr::<Registers>() };
         Self::new(ptr)

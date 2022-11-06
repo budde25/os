@@ -1,8 +1,12 @@
-use crate::address::phys::PhysicalAddress;
+use spin::lazy::Lazy;
+use x86_64::PhysicalAddress;
+
 use core::{
     fmt::{self, Debug},
     ops::Index,
 };
+
+pub static SECTIONS: Lazy<Sections> = Lazy::new(Sections::new);
 
 #[derive(Debug)]
 pub struct Sections {

@@ -52,7 +52,7 @@ impl IoApic {
 
 impl Default for IoApic {
     fn default() -> Self {
-        use crate::tables::MADT_TABLE;
+        use crate::multiboot::MADT_TABLE;
         let addr = MADT_TABLE.ioapic_addr();
         unsafe { Self::new(addr.as_mut_ptr::<IoApicRegister>()) }
     }

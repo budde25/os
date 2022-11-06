@@ -139,6 +139,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "multiboot2"
+version = "0.1.0"
+dependencies = [
+ "x86_64",
+]
+
+[[package]]
 name = "os"
 version = "0.1.0"
 dependencies = [
@@ -151,9 +158,11 @@ dependencies = [
  "custom_debug_derive",
  "derive_more",
  "futures-util",
+ "multiboot2",
  "port",
  "spin",
  "volatile",
+ "x86_64",
 ]
 
 [[package]]
@@ -266,3 +275,13 @@ name = "volatile"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3ca98349dda8a60ae74e04fd90c7fb4d6a4fbe01e6d3be095478aa0b76f6c0c"
+
+[[package]]
+name = "x86_64"
+version = "0.1.0"
+dependencies = [
+ "bit_field",
+ "bitflags",
+ "derive_more",
+ "spin",
+]

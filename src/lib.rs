@@ -9,30 +9,23 @@
 #![feature(const_mut_refs)]
 #![feature(panic_info_message)]
 #![feature(int_roundings)]
-#![feature(once_cell)]
 
 core::arch::global_asm!(include_str!("arch/x86_64/boot_32.s"));
 core::arch::global_asm!(include_str!("arch/x86_64/boot_64.s"));
 core::arch::global_asm!(include_str!("arch/x86_64/trampoline.s"));
 
-// export some common functionality
-pub use address::PhysicalAddress;
-pub use address::VirtualAddress;
-
 extern crate alloc;
 
 // pub so we can use them in integration tests
-pub mod address;
+pub mod sections;
 pub mod common;
 pub mod consts;
 pub mod disk;
 pub mod interrupts;
 pub mod io;
 pub mod memory;
-pub mod paging;
 pub mod proc;
-pub mod registers;
-pub mod tables;
+pub mod multiboot;
 pub mod task;
 
 /// Entry point for `cargo test`
@@ -40,7 +33,8 @@ pub mod task;
 #[no_mangle]
 pub extern "C" fn kmain() -> ! {
     // Map all of physical memory to addr + kernel offset
-    paging::map_all_physical_memory();
+    use sections::{Section, SECTIONS};
+    x86_64::paging::map_all_physical_memory(SECTIONS[Section::PhysPageTable].start());
 
     interrupts::init();
     test_main();

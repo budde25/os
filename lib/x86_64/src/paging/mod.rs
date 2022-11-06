@@ -3,6 +3,8 @@ pub mod page_table;
 pub mod phys_frame;
 pub mod tlb;
 
+use crate::PhysicalAddress;
+
 use allocator::Mapper;
 use spin::{Lazy, Mutex};
 
@@ -12,11 +14,7 @@ pub static MAPPER: Lazy<Mutex<Mapper>> = Lazy::new(|| {
 });
 
 // Map all of physical memory to += phys mem offset
-pub fn map_all_physical_memory() {
-    // TODO this could use some serious refactoring
-    use crate::address::sections::Section;
-    use crate::address::SECTIONS;
-    use crate::PhysicalAddress;
+pub fn map_all_physical_memory(start_address: PhysicalAddress) {
     use page_table::{Level4, PageFlags, PageTable, PageTableEntry};
 
     const SIZE_2MIB: u64 = 0x200000;
@@ -24,7 +22,8 @@ pub fn map_all_physical_memory() {
     let mut m = MAPPER.lock();
     let p4 = m.p4_mut();
 
-    let page_table_3 = SECTIONS[Section::PhysPageTable].start();
+    //let page_table_3 = SECTIONS[Section::PhysPageTable].start();
+    let page_table_3 = start_address;
 
     let mut entry = PageTableEntry::new();
     let flags = PageFlags::PRESENT | PageFlags::WRITEABLE;
@@ -50,7 +49,7 @@ pub fn map_all_physical_memory() {
             addr_final += SIZE_2MIB;
         }
     }
-    crate::kprintln!("All physical memory as been mapped");
+    // crate::kprintln!("All physical memory as been mapped");
 }
 
 #[cfg(test)]

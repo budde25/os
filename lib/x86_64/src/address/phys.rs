@@ -1,4 +1,3 @@
-use super::sections::Section;
 use super::virt::VirtualAddress;
 use bit_field::BitField;
 use core::convert::TryFrom;
@@ -36,7 +35,7 @@ impl PhysicalAddress {
     }
 
     pub const fn as_ptr<T>(&self) -> *const T {
-        use crate::consts::KERNEL_OFFSET;
+        use crate::KERNEL_OFFSET;
         (self.0 + KERNEL_OFFSET) as *const T
     }
 
@@ -69,10 +68,6 @@ impl PhysicalAddress {
         U: Into<u64>,
     {
         self.align_down(align) == self
-    }
-
-    pub fn section(&self) -> Section {
-        super::SECTIONS.containing_address(self)
     }
 }
 
@@ -196,7 +191,6 @@ impl Debug for PhysicalAddress {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("PhysicalAddress")
             .field("address", &format_args!("{:#X}", self.0))
-            .field("section", &self.section())
             .finish()
     }
 }

@@ -1,4 +1,4 @@
-use crate::address::VirtualAddress;
+use x86_64::VirtualAddress;
 use crate::interrupts::tss::TaskStateSegment;
 use crate::interrupts::DescriptorTablePointer;
 

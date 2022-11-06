@@ -2,8 +2,8 @@ use super::tlb;
 use crate::consts::{KHEAP_START, SIZE_1KIB};
 use crate::paging::page_table::{Level4, PageTable};
 use crate::paging::phys_frame::PhysFrame;
-use crate::PhysicalAddress;
-use crate::{registers::control::Cr3, VirtualAddress};
+use crate::{PhysicalAddress, VirtualAddress};
+use crate::{registers::control::Cr3};
 use core::sync::atomic::{AtomicU64, Ordering};
 
 use super::page_table::PageFlags;

@@ -1,4 +1,4 @@
-use crate::address::VirtualAddress;
+use x86_64::VirtualAddress;
 use crate::interrupts::SegmentSelector;
 use crate::proc::cpu::Rflags;
 use bit_field::BitField;

@@ -6,14 +6,14 @@ use cpu::Cpu;
 // use process::Process;
 // use spin::Mutex;
 
-use crate::PhysicalAddress;
+use x86_64::PhysicalAddress;
 
 //static CPUS: StaticVec<Cpu, 8> = StaticVec::new();
 //static PTABLE: Mutex<StaticVec<Process, 64>> = Mutex::new(StaticVec::new());
 
 pub fn ap_startup() {
-    use crate::paging::allocator::Allocator;
-    use crate::tables::MADT_TABLE;
+    use x86_64::paging::allocator::Allocator;
+    use crate::multiboot::MADT_TABLE;
 
     let _aps_running = 0;
 
@@ -32,7 +32,7 @@ pub fn ap_startup() {
             continue;
         }
 
-        let stack = crate::paging::MAPPER.lock().allocate_frame().unwrap();
+        let stack = x86_64::paging::MAPPER.lock().allocate_frame().unwrap();
         let stack_addr = u64::from(stack.address());
         let code_ptr = code.as_mut_ptr::<u64>();
         unsafe { code_ptr.sub(1).write_volatile(stack_addr + 4096) };

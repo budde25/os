@@ -1,5 +1,7 @@
-use super::{align_down, align_up, phys::PhysicalAddress};
 use crate::paging::page_table::{PageOffset, PageTableIndex};
+
+use super::{align_down, align_up, phys::PhysicalAddress};
+
 use bit_field::BitField;
 use core::convert::{From, TryFrom};
 use core::fmt::{self, Debug, Formatter};

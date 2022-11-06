@@ -9,30 +9,23 @@
 #![feature(int_roundings)]
 #![test_runner(crate::common::test_runner)]
 #![reexport_test_harness_main = "test_main"]
-#![feature(once_cell)]
 #![allow(dead_code)]
 
 core::arch::global_asm!(include_str!("arch/x86_64/boot_32.s"));
 core::arch::global_asm!(include_str!("arch/x86_64/boot_64.s"));
 core::arch::global_asm!(include_str!("arch/x86_64/trampoline.s"));
 
-// export some common functionality
-pub use address::PhysicalAddress;
-pub use address::VirtualAddress;
-
 extern crate alloc;
 
-mod address;
+mod sections;
 mod common;
 mod consts;
 mod disk;
 mod interrupts;
 mod io;
 mod memory;
-mod paging;
 mod proc;
-mod registers;
-mod tables;
+mod multiboot;
 mod task;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,17 +44,19 @@ pub extern "C" fn kmain() -> ! {
 
     // Map all of physical memory to addr + kernel offset,
     // we should start with this to avoid errors with physical addrs
-    paging::map_all_physical_memory();
+    use sections::{Section, SECTIONS};
+    x86_64::paging::map_all_physical_memory(SECTIONS[Section::PhysPageTable].start());
+    kdbg!("All physical memory has been mapped");
 
     // Load GDT and IDT
     interrupts::init();
 
     // log that we are starting
-    if let Some(name) = tables::MULTIBOOT.boot_loader_name {
+    if let Some(name) = multiboot::MULTIBOOT_INFO.boot_loader_name() {
         kprintln!("Booting from: {}", name.string())
     }
 
-    kprintln!("Number of cores: {}", tables::MADT_TABLE.num_cores());
+    kprintln!("Number of cores: {}", multiboot::MADT_TABLE.num_cores());
 
     // enable the lapic
     io::lapic_init();
@@ -105,11 +100,10 @@ extern "C" fn eh_personality() {
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    use crate::io::colors::{NC, RED};
-    crate::io::kpanicprint!("{RED}Aborting: ");
+    crate::io::kpanicprint!("Aborting: ");
     if let Some(p) = info.location() {
         crate::io::kpanicprintln!(
-            "[{}:{}] {}{NC}",
+            "[{}:{}] {}",
             p.file(),
             p.line(),
             info.message().unwrap()
