@@ -1,16 +1,16 @@
 .code32
 
-.set MAGIC, 0xE85250D6
-.set VGA, 0xB8000
+.set MULTIBOOT_MAGIC, 0xE85250D6 # multiboot 2 magic
+.set VGA, 0xB8000 # Physical address to VGA buffer
 
 .section .multiboot
-.align 4
+.align 8
 multiboot_start:
-    .long MAGIC # Magic multiboot 2
+    .long MULTIBOOT_MAGIC # Magic multiboot 2
     .long 0x00000000 # Arch 0
     .long multiboot_end - multiboot_start # Header length
     # Checksum
-    .long 0x100000000 - (MAGIC + 0 + (multiboot_end - multiboot_start))
+    .long 0x100000000 - (MULTIBOOT_MAGIC + 0 + (multiboot_end - multiboot_start))
 
     # End tag
     .word 0x0000 # Type
@@ -45,7 +45,7 @@ multiboot_info_ptr:
 .global _start
 .type _start, @function
 _start:
-    mov multiboot_info_ptr, ebx
+    mov multiboot_info_ptr, ebx # store the ptr to the multiboot_info struct
     mov esp, offset stack_top # stack grows from downwards
   
     call check_multiboot
