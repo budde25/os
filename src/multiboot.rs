@@ -4,13 +4,15 @@ use multiboot2::MultibootInfo;
 use x86_64::tables::acpi::Acpi;
 use x86_64::tables::madt::MultiAPIC;
 
+/// Global variable set by the assembly code and loaded with pointer to the multiboot info table
+/// # Saftey
+/// * This function is never set after the assembly code inits it
+#[no_mangle]
+pub static mut multiboot_info_ptr: u32 = 0;
+
 pub static MULTIBOOT_INFO: Lazy<MultibootInfo> = Lazy::new(|| {
-    extern "C" {
-        static multiboot_info_ptr: u32;
-    }
-    let mbinfo = unsafe { MultibootInfo::new(multiboot_info_ptr as usize) }
-        .expect("There should be valid multiboot info table");
-    mbinfo
+    unsafe { MultibootInfo::new(multiboot_info_ptr as usize) }
+        .expect("There should be valid multiboot info table")
 });
 
 pub static ACPI_TABLE: Lazy<Acpi> = Lazy::new(|| {
