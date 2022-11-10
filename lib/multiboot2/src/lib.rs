@@ -7,8 +7,10 @@ pub use fields::{
     RsdpV2,
 };
 use fields::{ModuleIter, Tag, TagIter, TagType};
+pub use header::MultiBoot2Header;
 
 mod fields;
+mod header;
 
 #[derive(Clone, Copy)]
 pub struct MultibootInfo {

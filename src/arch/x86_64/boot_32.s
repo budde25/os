@@ -1,22 +1,6 @@
 .code32
 
-.set MULTIBOOT_MAGIC, 0xE85250D6 # multiboot 2 magic
 .set VGA, 0xB8000 # Physical address to VGA buffer
-
-.section .multiboot
-.align 8
-multiboot_start:
-    .long MULTIBOOT_MAGIC # Magic multiboot 2
-    .long 0x00000000 # Arch 0
-    .long multiboot_end - multiboot_start # Header length
-    # Checksum
-    .long 0x100000000 - (MULTIBOOT_MAGIC + 0 + (multiboot_end - multiboot_start))
-
-    # End tag
-    .word 0x0000 # Type
-    .word 0x0000 # Flag
-    .long 0x00000008 # Size
-multiboot_end:
 
 .section .page_table, "aw"
 .align 4096

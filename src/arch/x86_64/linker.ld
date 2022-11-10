@@ -9,7 +9,7 @@ SECTIONS
     .text : ALIGN(4K)
     {
         __text_start = .;
-        *(.multiboot)
+        KEEP(*(.multiboot*))
         *(.text*)
         __mp_boot_start = .;
         *(.mp_boot)

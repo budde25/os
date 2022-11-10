@@ -1,8 +1,13 @@
 use spin::Lazy;
 
-use multiboot2::MultibootInfo;
+use multiboot2::{MultiBoot2Header, MultibootInfo};
 use x86_64::tables::acpi::Acpi;
 use x86_64::tables::madt::MultiAPIC;
+
+/// Puts the multiboot2 header at section .multiboot allowing for booting for bootloaders such as grub2
+#[no_mangle]
+#[link_section = ".multiboot"]
+pub static MULTIBOOT2_HEADER: MultiBoot2Header = MultiBoot2Header::new();
 
 /// Global variable set by the assembly code and loaded with pointer to the multiboot info table
 /// # Saftey
