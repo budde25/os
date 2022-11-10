@@ -1,6 +1,6 @@
-use x86_64::VirtualAddress;
 use crate::interrupts::tss::TaskStateSegment;
 use crate::interrupts::DescriptorTablePointer;
+use x86_64::VirtualAddress;
 
 use super::{PrivilegeLevel, SegmentSelector};
 use bit_field::BitField;

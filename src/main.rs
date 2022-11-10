@@ -17,15 +17,15 @@ core::arch::global_asm!(include_str!("arch/x86_64/trampoline.s"));
 
 extern crate alloc;
 
-mod sections;
 mod common;
 mod consts;
 mod disk;
 mod interrupts;
 mod io;
 mod memory;
-mod proc;
 mod multiboot;
+mod proc;
+mod sections;
 mod task;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,7 +46,7 @@ pub extern "C" fn kmain() -> ! {
     // we should start with this to avoid errors with physical addrs
     use sections::{Section, SECTIONS};
     x86_64::paging::map_all_physical_memory(SECTIONS[Section::PhysPageTable].start());
-    kdbg!("All physical memory has been mapped");
+    kprintln!("All physical memory has been mapped");
 
     // Load GDT and IDT
     interrupts::init();
@@ -102,12 +102,7 @@ extern "C" fn eh_personality() {
 fn panic(info: &core::panic::PanicInfo) -> ! {
     crate::io::kpanicprint!("Aborting: ");
     if let Some(p) = info.location() {
-        crate::io::kpanicprintln!(
-            "[{}:{}] {}",
-            p.file(),
-            p.line(),
-            info.message().unwrap()
-        );
+        crate::io::kpanicprintln!("[{}:{}] {}", p.file(), p.line(), info.message().unwrap());
     } else {
         crate::io::kpanicprintln!("no information available.");
     }

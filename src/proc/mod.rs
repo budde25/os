@@ -12,8 +12,8 @@ use x86_64::PhysicalAddress;
 //static PTABLE: Mutex<StaticVec<Process, 64>> = Mutex::new(StaticVec::new());
 
 pub fn ap_startup() {
-    use x86_64::paging::allocator::Allocator;
     use crate::multiboot::MADT_TABLE;
+    use x86_64::paging::allocator::Allocator;
 
     let _aps_running = 0;
 

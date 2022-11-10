@@ -17,15 +17,15 @@ core::arch::global_asm!(include_str!("arch/x86_64/trampoline.s"));
 extern crate alloc;
 
 // pub so we can use them in integration tests
-pub mod sections;
 pub mod common;
 pub mod consts;
 pub mod disk;
 pub mod interrupts;
 pub mod io;
 pub mod memory;
-pub mod proc;
 pub mod multiboot;
+pub mod proc;
+pub mod sections;
 pub mod task;
 
 /// Entry point for `cargo test`

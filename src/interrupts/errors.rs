@@ -1,9 +1,9 @@
-use x86_64::VirtualAddress;
 use crate::interrupts::SegmentSelector;
 use crate::proc::cpu::Rflags;
 use bit_field::BitField;
 use bitflags::bitflags;
 use core::fmt::{self, Debug};
+use x86_64::VirtualAddress;
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]
