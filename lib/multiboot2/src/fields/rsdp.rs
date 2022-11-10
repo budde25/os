@@ -13,6 +13,10 @@ impl RsdpV1 {
     pub fn table(&self) -> RSDPV1 {
         self.table
     }
+
+    pub fn tag(&self) -> Tag {
+        self.tag
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -24,5 +28,9 @@ pub struct RsdpV2 {
 impl RsdpV2 {
     pub fn table(&self) -> RSDPV2 {
         self.table
+    }
+
+    pub fn tag(&self) -> Tag {
+        self.tag
     }
 }

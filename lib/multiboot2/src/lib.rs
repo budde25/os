@@ -3,8 +3,8 @@
 use core::fmt::Debug;
 
 pub use fields::{
-    APMTable, BIOSBootDevice, BasicMemoryInfo, BootCommandLine, BootLoaderName, Module, RsdpV1,
-    RsdpV2,
+    APMTable, BIOSBootDevice, BasicMemoryInfo, BootCommandLine, BootLoaderName, EFI32Image, EFI32Table, EFI64Image, EFI64Table, EFIMemoryMap, EFIError,ElfSymbols, FrameBufferInfo, FrameBufferType, ImageLoaderBase, MemoryMap, MemoryMapEntry, MemoryMapEntryType, Module, RsdpV1,
+    RsdpV2, NetworkInfo, SMBIOSTables, VBEInfo
 };
 use fields::{ModuleIter, Tag, TagIter, TagType};
 pub use header::MultiBoot2Header;

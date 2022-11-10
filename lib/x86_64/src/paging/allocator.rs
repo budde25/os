@@ -9,7 +9,7 @@ use core::sync::atomic::{AtomicU64, Ordering};
 use super::page_table::PageFlags;
 
 pub struct FreeList {
-    list: [PhysFrame; 256],
+    _list: [PhysFrame; 256],
 }
 
 pub trait Allocator {

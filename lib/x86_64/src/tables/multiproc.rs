@@ -1,8 +1,6 @@
-const MP_SIGNATURE: [char; 4] = ['_', 'M', 'P', '_'];
-
 #[repr(C, packed)]
-struct MultiProcessor {
-    signature: [char; 4], // "_MP_" or 0x5F504D5F.
+pub struct MultiProcessor {
+    signature: [u8; 4], // "_MP_" or 0x5F504D5F.
     configuration_table: u32,
     length: u8, // In 16 bytes (e.g. 1 = 16 bytes, 2 = 32 bytes)
     mp_specification_revision: u8,
@@ -14,8 +12,8 @@ struct MultiProcessor {
 }
 
 #[repr(C, packed)]
-struct MPConfigurationTable {
-    signature: [char; 4], // "PCMP"
+pub struct MPConfigurationTable {
+    signature: [u8; 4], // "PCMP"
     length: u32,
     mp_specification_revision: u8,
     checksum: u8, // Again, the byte should be all bytes in the table add up to 0
@@ -31,7 +29,7 @@ struct MPConfigurationTable {
 }
 
 #[repr(C, packed)]
-struct MPProcessorEntry {
+pub struct MPProcessorEntry {
     proc_type: u8, // Always 0
     local_apic_id: u8,
     local_apic_version: u8,
@@ -43,7 +41,7 @@ struct MPProcessorEntry {
 }
 
 #[repr(C, packed)]
-struct MPOIApicEntry {
+pub struct MPOIApicEntry {
     apci_type: u8, // Always 2
     id: u8,
     version: u8,
