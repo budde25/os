@@ -32,7 +32,7 @@ pub fn ap_startup() {
             continue;
         }
 
-        let stack = x86_64::paging::MAPPER.lock().allocate_frame().unwrap();
+        let stack = crate::paging::MAPPER.lock().allocate_frame().unwrap();
         let stack_addr = u64::from(stack.address());
         let code_ptr = code.as_mut_ptr::<u64>();
         unsafe { code_ptr.sub(1).write_volatile(stack_addr + 4096) };

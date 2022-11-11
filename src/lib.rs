@@ -24,6 +24,7 @@ pub mod interrupts;
 pub mod io;
 pub mod memory;
 pub mod multiboot;
+pub mod paging;
 pub mod proc;
 pub mod sections;
 pub mod task;
@@ -34,7 +35,7 @@ pub mod task;
 pub extern "C" fn kmain() -> ! {
     // Map all of physical memory to addr + kernel offset
     use sections::{Section, SECTIONS};
-    x86_64::paging::map_all_physical_memory(SECTIONS[Section::PhysPageTable].start());
+    paging::map_all_physical_memory(SECTIONS[Section::PhysPageTable].start());
 
     interrupts::init();
     test_main();
