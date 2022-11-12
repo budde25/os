@@ -6,10 +6,7 @@ use spin::{Lazy, Mutex};
 use x86_64::paging::allocator::Mapper;
 use x86_64::paging::page_table::{Level4, PageFlags, PageTable};
 
-pub static MAPPER: Lazy<Mutex<Mapper>> = Lazy::new(|| {
-    let m = unsafe { Mapper::new() };
-    Mutex::new(m)
-});
+pub static MAPPER: Lazy<Mutex<Mapper>> = Lazy::new(|| Mutex::new(unsafe { Mapper::new() }));
 
 // Map all of physical memory to += phys mem offset
 pub fn map_all_physical_memory(start_address: PhysicalAddress) {
