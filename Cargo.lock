@@ -27,7 +27,7 @@ version = "0.1.0"
 [[package]]
 name = "block-alloc"
 version = "0.1.0"
-source = "git+ssh://git@github.com/budde25/alloc.git#bb2657ad4a10ac95d8e7334ac637419426d32234"
+source = "git+ssh://git@github.com/budde25/alloc.git#bd5096e73535842bac9282cd028af10611f6261d"
 dependencies = [
  "bitflags",
  "spin",
