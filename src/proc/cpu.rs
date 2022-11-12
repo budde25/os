@@ -13,7 +13,7 @@ impl Cpu {
             "Interrupts must be disabled"
         );
 
-        let apic_id = unsafe { LAPIC.id() };
+        let apic_id = LAPIC.id();
 
         Self { apic_id }
     }

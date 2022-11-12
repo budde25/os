@@ -43,11 +43,11 @@ static PICS: Mutex<Pics> = Mutex::new(Pics::new());
 
 /// Global local APIC, not need to may be mut static since it is unique per cpu
 /// must be initalized once
-pub static mut LAPIC: Lazy<Lapic> = Lazy::new(Lapic::default);
+pub static LAPIC: Lazy<Lapic> = Lazy::new(Lapic::default);
 
 /// Global IO APIC, not need to may be mut static since it is unique per cpu
 /// must be initalized once
-pub static mut IO_APIC: Lazy<IoApic> = Lazy::new(IoApic::default);
+pub static IO_APIC: Lazy<IoApic> = Lazy::new(IoApic::default);
 
 pub static mut CMOS: Cmos = Cmos::new();
 
@@ -70,10 +70,10 @@ pub fn lapic_init() {
         panic!("ioapic already init")
     }
 
-    unsafe { Lazy::<Lapic>::force(&LAPIC) };
+    Lazy::<Lapic>::force(&LAPIC);
 
     unsafe { (*LAPIC.as_mut_ptr()).init() };
-    let status = unsafe { LAPIC.error_status() };
+    let status = LAPIC.error_status();
 
     if status.is_empty() {
         kprintln!("LAPIC has been initialized");
