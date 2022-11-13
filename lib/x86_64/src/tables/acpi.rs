@@ -1,5 +1,6 @@
 use core::fmt::Debug;
 use core::ptr::addr_of;
+use core::slice;
 
 use crate::PhysicalAddress;
 
@@ -19,37 +20,26 @@ pub struct AcpiSdtHeader {
 
 impl AcpiSdtHeader {
     pub fn signature(&self) -> &str {
-        let ptr = &self.signature as *const u8;
-        let slice = unsafe { core::slice::from_raw_parts(ptr, 4) };
-        unsafe { core::str::from_utf8_unchecked(slice) }
+        unsafe { core::str::from_utf8_unchecked(&self.signature) }
     }
 
     pub fn oem_id(&self) -> &str {
-        let ptr = &self.oem_id as *const u8;
-        let slice = unsafe { core::slice::from_raw_parts(ptr, 6) };
-        unsafe { core::str::from_utf8_unchecked(slice) }
+        unsafe { core::str::from_utf8_unchecked(&self.oem_id) }
     }
 
     pub fn oem_table_id(&self) -> &str {
-        let ptr = &self.oem_table_id as *const u8;
-        let slice = unsafe { core::slice::from_raw_parts(ptr, 6) };
-        unsafe { core::str::from_utf8_unchecked(slice) }
+        unsafe { core::str::from_utf8_unchecked(&self.oem_table_id) }
     }
 
     pub fn length(&self) -> u32 {
         self.length
     }
 
-    /// Returns true if the table is valid, false otherwise
-    pub fn is_valid(&self) -> u64 {
-        let mut sum: u64 = 0;
-        let mut ptr = self as *const _ as *mut u8;
-        for _ in 0..self.length {
-            sum += unsafe { *ptr } as u64;
-            ptr = unsafe { ptr.add(1) };
-        }
-
-        sum % 0x100
+    /// Validation using the checksum
+    pub fn is_valid(&self) -> bool {
+        let bytes =
+            unsafe { slice::from_raw_parts(self as *const _ as *const u8, self.length as usize) };
+        bytes.iter().fold(0u8, |acc, val| acc.wrapping_add(*val)) == 0
     }
 }
 
