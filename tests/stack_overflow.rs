@@ -26,11 +26,6 @@ pub extern "C" fn kmain() -> ! {
     panic!("Execution continued after stack overflow");
 }
 
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    os::common::test_panic_handler(info)
-}
-
 #[allow(unconditional_recursion)]
 fn stack_overflow() {
     unsafe {

@@ -1,6 +1,10 @@
 use crate::interrupts::halt_loop;
 use crate::{kprint, kprintln};
 
+pub const GREEN: &str = "\x1b[0;32m";
+pub const NC: &str = "\x1b[0m";
+pub const RED: &str = "\x1b[0;31m";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum QemuExitCode {
@@ -13,12 +17,6 @@ fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
     panic!("allocation error: {:?}", layout)
 }
 
-#[cfg(test)]
-#[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
-    test_panic_handler(info)
-}
-
 pub trait Testable {
     fn run(&self);
 }
@@ -28,8 +26,6 @@ where
     T: Fn(),
 {
     fn run(&self) {
-        use crate::io::colors::{GREEN, NC};
-
         kprint!("{:60}", core::any::type_name::<T>());
         self();
         kprintln!("{GREEN}[Ok]{NC}");
@@ -37,14 +33,8 @@ where
 }
 
 #[no_mangle]
-#[cfg(not(test))]
 pub extern "C" fn abort() -> ! {
-    halt_loop();
-}
-
-#[no_mangle]
-#[cfg(test)]
-pub extern "C" fn abort() -> ! {
+    #[cfg(not(test))]
     exit_qemu(false);
     halt_loop();
 }
@@ -62,18 +52,7 @@ pub fn exit_qemu(success: bool) {
     unsafe { port.write(exit_code) };
 }
 
-#[cfg(not(test))]
 pub fn test_runner(tests: &[&dyn Testable]) {
-    kprintln!("Running {} tests", tests.len());
-    for test in tests {
-        test.run();
-    }
-    exit_qemu(true)
-}
-
-#[cfg(test)]
-pub fn test_runner(tests: &[&dyn Testable]) {
-    use crate::io::colors::{GREEN, NC};
     kprintln!("Running {} tests", tests.len());
     for test in tests {
         test.run();
@@ -82,19 +61,24 @@ pub fn test_runner(tests: &[&dyn Testable]) {
     exit_qemu(true)
 }
 
-pub fn test_panic_handler(info: &core::panic::PanicInfo) -> ! {
-    use crate::io::colors::{NC, RED};
-    crate::io::kpanicprintln!("{RED}[failed]\n");
+#[panic_handler]
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    let fail = "No message available";
+
     if let Some(p) = info.location() {
-        crate::io::kpanicprintln!(
-            "[{}:{}] {}{NC}",
-            p.file(),
-            p.line(),
-            info.message().unwrap()
-        );
+        let message = match info.message() {
+            Some(message) => message.as_str().unwrap_or(fail),
+            None => fail,
+        };
+        kprintln!("Panic: [{}:{}] {}", p.file(), p.line(), message);
     } else {
-        crate::io::kpanicprintln!("no information available.");
+        kprintln!("Panic: No information available");
     }
-    exit_qemu(false);
-    halt_loop();
+    #[cfg(test)]
+    {
+        exit_qemu(false);
+        halt_loop();
+    }
+
+    abort()
 }
