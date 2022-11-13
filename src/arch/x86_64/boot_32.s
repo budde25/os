@@ -10,9 +10,12 @@ p3_table:
     .skip 4096
 p2_table:
     .skip 4096
-
-.section .page_table_2, "aw"
+.section .phys_page_table, "aw"
 .align 4096
+phys_p3_table_2:
+    .skip 4096
+phys_p2_table_2:
+    .skip (4096 * 32)
 
 .section .bss
 .align 4096

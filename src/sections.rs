@@ -31,8 +31,8 @@ impl Sections {
             static __bss_end: usize;
             static __page_table_start: usize;
             static __page_table_end: usize;
-            static __page_table_2_start: usize;
-            static __page_table_2_end: usize;
+            static __phys_page_table_start: usize;
+            static __phys_page_table_end: usize;
         }
 
         let text_start = unsafe { &__text_start as *const _ as u64 };
@@ -45,8 +45,8 @@ impl Sections {
         let bss_end = unsafe { &__bss_end as *const _ as u64 };
         let page_table_start = unsafe { &__page_table_start as *const _ as u64 };
         let page_table_end = unsafe { &__page_table_end as *const _ as u64 };
-        let page_table_2_start = unsafe { &__page_table_2_start as *const _ as u64 };
-        let page_table_2_end = unsafe { &__page_table_2_end as *const _ as u64 };
+        let phys_page_table_start = unsafe { &__phys_page_table_start as *const _ as u64 };
+        let phys_page_table_end = unsafe { &__phys_page_table_end as *const _ as u64 };
 
         Self {
             text: SectionRange::new(text_start, text_end),
@@ -54,7 +54,7 @@ impl Sections {
             data: SectionRange::new(data_start, data_end),
             bss: SectionRange::new(bss_start, bss_end),
             page_table: SectionRange::new(page_table_start, page_table_end),
-            phys_page_table: SectionRange::new(page_table_2_start, page_table_2_end),
+            phys_page_table: SectionRange::new(phys_page_table_start, phys_page_table_end),
         }
     }
 
