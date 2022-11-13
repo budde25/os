@@ -42,10 +42,9 @@ pub extern "C" fn abort() -> ! {
 pub fn exit_qemu(success: bool) {
     use port::Port;
 
-    let exit_code = if success {
-        QemuExitCode::Success as u32
-    } else {
-        QemuExitCode::Failed as u32
+    let exit_code = match success {
+        true => QemuExitCode::Success as u32,
+        false => QemuExitCode::Failed as u32,
     };
 
     let mut port = Port::new(0xf4);
@@ -70,9 +69,9 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
             Some(message) => message.as_str().unwrap_or(fail),
             None => fail,
         };
-        kprintln!("Panic: [{}:{}] {}", p.file(), p.line(), message);
+        crate::io::kpanicprintln!("Panic: [{}:{}] {}", p.file(), p.line(), message);
     } else {
-        kprintln!("Panic: No information available");
+        crate::io::kpanicprintln!("Panic: No information available");
     }
     #[cfg(test)]
     {
