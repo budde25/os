@@ -30,7 +30,7 @@ pub use {
     memory_map::{MemoryMap, MemoryMapEntry, MemoryMapEntryType},
     modules::{Module, ModuleIter},
     networking::NetworkInfo,
-    rsdp::{RsdpV1, RsdpV2},
+    rsdp::{RsdpV1Tag, RsdpV2Tag},
     smbios::SMBIOSTables,
     vbe_info::VBEInfo,
 };

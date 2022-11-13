@@ -3,8 +3,10 @@
 use core::fmt::Debug;
 
 pub use fields::{
-    APMTable, BIOSBootDevice, BasicMemoryInfo, BootCommandLine, BootLoaderName, EFI32Image, EFI32Table, EFI64Image, EFI64Table, EFIMemoryMap, EFIError,ElfSymbols, FrameBufferInfo, FrameBufferType, ImageLoaderBase, MemoryMap, MemoryMapEntry, MemoryMapEntryType, Module, RsdpV1,
-    RsdpV2, NetworkInfo, SMBIOSTables, VBEInfo
+    APMTable, BIOSBootDevice, BasicMemoryInfo, BootCommandLine, BootLoaderName, EFI32Image,
+    EFI32Table, EFI64Image, EFI64Table, EFIError, EFIMemoryMap, ElfSymbols, FrameBufferInfo,
+    FrameBufferType, ImageLoaderBase, MemoryMap, MemoryMapEntry, MemoryMapEntryType, Module,
+    NetworkInfo, RsdpV1Tag, RsdpV2Tag, SMBIOSTables, VBEInfo,
 };
 use fields::{ModuleIter, Tag, TagIter, TagType};
 pub use header::MultiBoot2Header;
@@ -84,15 +86,15 @@ impl MultibootInfo {
     }
 
     /// Search for RsdpV1
-    pub fn rsdp_v1(&self) -> Option<&RsdpV1> {
+    pub fn rsdp_v1(&self) -> Option<&RsdpV1Tag> {
         self.get_tag(TagType::RSDPV1)
-            .map(|tag| unsafe { &*(tag as *const Tag as *const RsdpV1) })
+            .map(|tag| unsafe { &*(tag as *const Tag as *const RsdpV1Tag) })
     }
 
     /// Search for RsdpV2
-    pub fn rsdp_v2(&self) -> Option<&RsdpV2> {
+    pub fn rsdp_v2(&self) -> Option<&RsdpV2Tag> {
         self.get_tag(TagType::RSDPV2)
-            .map(|tag| unsafe { &*(tag as *const Tag as *const RsdpV2) })
+            .map(|tag| unsafe { &*(tag as *const Tag as *const RsdpV2Tag) })
     }
 
     fn get(&self) -> &MultibootTable {

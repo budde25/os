@@ -1,4 +1,4 @@
-use super::acpi::ACPISDTHeader;
+use super::acpi::AcpiSdtHeader;
 use crate::PhysicalAddress;
 use derive_more::From;
 
@@ -38,7 +38,7 @@ impl MultiAPIC {
         let entry_header_size = size_of::<MadtEntryHeader>();
 
         self.lapic_addr = self.madt.lapic_addr.into();
-        self.index = size_of::<ACPISDTHeader>() as u32 + 8;
+        self.index = size_of::<AcpiSdtHeader>() as u32 + 8;
 
         let start = self.start_address;
         while self.index < self.madt.header.length() {
@@ -96,7 +96,7 @@ impl MultiAPIC {
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct Madt {
-    header: ACPISDTHeader,
+    header: AcpiSdtHeader,
     lapic_addr: u32,
     flags: u32,
 }

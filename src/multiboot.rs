@@ -21,8 +21,15 @@ pub static MULTIBOOT_INFO: Lazy<MultibootInfo> = Lazy::new(|| {
 });
 
 pub static ACPI_TABLE: Lazy<Acpi> = Lazy::new(|| {
-    let rsdp = MULTIBOOT_INFO.rsdp_v1().unwrap().table();
-    let mut acpi = Acpi::new(rsdp.rsdt_address());
+    let rsdp_addr = match MULTIBOOT_INFO.rsdp_v1() {
+        Some(rsdp) => match rsdp.table().is_valid() {
+            true => Some(rsdp.table().rsdt_address()),
+            false => panic!("RsdpV1 table is invalid"),
+        },
+        None => None,
+    };
+
+    let mut acpi = Acpi::new(rsdp_addr.unwrap());
     acpi.init();
     acpi
 });

@@ -1,16 +1,16 @@
 use super::Tag;
 
-use x86_64::tables::acpi::RSDPV1;
-use x86_64::tables::acpi::RSDPV2;
+use x86_64::tables::rsdp::RsdpV1;
+use x86_64::tables::rsdp::RsdpV2;
 
 #[derive(Debug, Clone, Copy)]
-pub struct RsdpV1 {
+pub struct RsdpV1Tag {
     tag: Tag,
-    table: RSDPV1,
+    table: RsdpV1,
 }
 
-impl RsdpV1 {
-    pub fn table(&self) -> RSDPV1 {
+impl RsdpV1Tag {
+    pub fn table(&self) -> RsdpV1 {
         self.table
     }
 
@@ -20,13 +20,13 @@ impl RsdpV1 {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct RsdpV2 {
+pub struct RsdpV2Tag {
     tag: Tag,
-    table: RSDPV2,
+    table: RsdpV2,
 }
 
-impl RsdpV2 {
-    pub fn table(&self) -> RSDPV2 {
+impl RsdpV2Tag {
+    pub fn table(&self) -> RsdpV2 {
         self.table
     }
 
