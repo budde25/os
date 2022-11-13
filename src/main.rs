@@ -96,15 +96,3 @@ pub extern "C" fn kmain() -> ! {
 extern "C" fn eh_personality() {
     interrupts::halt_loop();
 }
-
-#[cfg(not(test))]
-#[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
-    crate::io::kpanicprint!("Aborting: ");
-    if let Some(p) = info.location() {
-        crate::io::kpanicprintln!("[{}:{}] {}", p.file(), p.line(), info.message().unwrap());
-    } else {
-        crate::io::kpanicprintln!("no information available.");
-    }
-    common::abort()
-}

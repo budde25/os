@@ -4,7 +4,6 @@ use port::Port;
 static COM1: u16 = 0x3F8;
 type Register = Port<u8>;
 
-#[allow(dead_code)]
 pub struct Uart {
     /// Data register
     /// or (DLAB == 1)
@@ -61,7 +60,7 @@ impl Uart {
 
         // Check if serial is faulty (i.e: not same byte as sent)
         if self.data.read() != 0xAE {
-            panic!();
+            panic!("Serial communication is faulty");
         }
 
         // If serial is not faulty set it in normal operation mode

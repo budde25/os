@@ -1,12 +1,10 @@
 pub mod cmos;
-pub mod colors;
 pub mod console;
 pub mod ioapic;
 pub mod keyboard;
 pub mod lapic;
 pub mod pic;
 pub mod pit;
-pub mod uart;
 pub mod vga;
 
 use cmos::Cmos;
@@ -14,8 +12,8 @@ use core::fmt::{Arguments, Write};
 use core::sync::atomic::AtomicBool;
 use ioapic::IoApic;
 use lapic::Lapic;
+use serial::Uart;
 use spin::{Lazy, Mutex};
-use uart::Uart;
 use vga::Vga;
 
 use self::cmos::RtcDate;
@@ -181,7 +179,7 @@ pub(super) use kpanicprintln;
 
 #[doc(hidden)]
 pub fn _print(args: Arguments, panic: bool) {
-    _print_vga(args, panic);
+    //_print_vga(args, panic);
     _print_uart(args, panic);
 }
 
